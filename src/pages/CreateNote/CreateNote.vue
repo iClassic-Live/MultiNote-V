@@ -832,10 +832,10 @@ export default {
                 if (this.title.length > 0 && this.title.trim().length === 0) {
                     this.title = "";
                     wx.showToast({
-                        title: "标题不能为空格",
+                        title: "行首不能为空格",
                         image: "/static/images/warning.png"
                     });
-                }else if (this.title[0] === " ") {
+                }else if (this.title[0] === " " && /\S+/.test(this.title)) {
                     let buffer = this.title;
                     while(buffer[0] === " ") buffer = buffer.substring(1);
                     this.title = buffer;
