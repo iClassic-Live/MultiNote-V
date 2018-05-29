@@ -61,7 +61,7 @@
 
                 <view class="head">
                     <view class="title">
-                        <text class="tag">来自：</text>
+                        <text class="tag">摘要：</text>
                         <textarea disabled="true" v-bind:value="title"></textarea>
                     </view>
                     <view class="exit">

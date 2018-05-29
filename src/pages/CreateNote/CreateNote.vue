@@ -14,7 +14,7 @@
             <view class="menu" v-if="noting === 'menu'">
 
                 <view class="title">
-                    标题：
+                    摘要：
                     <view class="input">
                         <input v-bind:value="title" v-bind:placeholder="titleDefault" @focus="titleContent" @input="titleContent" @blur="titleContent"/>
                     </view>
