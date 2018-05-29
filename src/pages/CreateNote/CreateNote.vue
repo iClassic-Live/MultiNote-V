@@ -9,7 +9,7 @@
             </swiper>
         </scroll-view>
 
-        <scroll-view id="mainFn" v-if="!useCamera">
+        <view id="mainFn" v-if="!useCamera">
 
             <view class="menu" v-if="noting === 'menu'">
 
@@ -49,7 +49,7 @@
 
             </view>
 
-            <view class="noting" v-if="noting !== 'menu'">
+            <scroll-view class="noting" v-if="noting !== 'menu'">
 
                 <view class="exit">
                     <img v-bind:src="'/static/images/' + (noting || 'null') + '.png' " @tap="backToMenu"/>
@@ -82,7 +82,7 @@
                         </view>
 
                         <view class="playback ele" @tap="playbackFn">
-                            <button v-bind:id="'rec_' + index" v-bind:src="item.url" v-for="(item, index) in playback" :key="index"
+                            <button v-bind:id="'rec_' + index" v-bind:src="item.path" v-for="(item, index) in playback" :key="index"
                              v-bind:style="{opacity:item.opacity}" @tap.stop="playbackFn" @longpress.stop="deleteRecord">
                              {{index + 1}}</button>
                         </view>
@@ -93,7 +93,7 @@
                         <swiper v-if="!reRender" v-bind:current="imgCurrent" circular="true"
                         indicator-dots="true" indicator-active-color="#fff" @animationfinish="setImgCurrent">
                             <swiper-item v-bind:id="'image_' + index" v-for="(item, index) in img" :key="index" @tap="previewImage" @longpress="save_deleteImage">
-                                <img mode="aspectFit" v-bind:src="item.url">
+                                <img mode="aspectFit" v-bind:src="item.path">
                             </swiper-item>
                         </swiper>
                     </view>
@@ -105,9 +105,9 @@
 
                 </view>
 
-            </view>
+            </scroll-view>
 
-        </scroll-view>
+        </view>
 
         <view id="cameraFn" v-if="useCamera">
             <camera v-bind:style="{display:!ifPreview ? 'block' : 'none'}" v-bind:flash="flash" v-bind:device-position="camSet">
@@ -271,7 +271,7 @@
             .bgiChange .bgiChange_cp {
                 height: 10vw;
                 width: 10vw;
-                background: radial-gradient(circle ,rgba(255, 255, 255, 0.4), #00f);
+                background: radial-gradient(circle ,rgba(255, 255, 255, 0.5), #00f);
                 border-radius: 50%;
             }
             .bgiChange_cp img {
@@ -303,7 +303,7 @@
                 box-sizing: border-box;
                 height: 90%;
                 width: 100%;
-                background-color: rgba(255, 255, 255, 0.4);
+                background-color: rgba(255, 255, 255, 0.5);
             }
             .noting .creating .sel {
                 box-sizing: border-box;
@@ -317,7 +317,7 @@
                     height: 85%;
                     width: 100%;
                     padding: 0 1%;
-                    background-color: rgba(255, 255, 255, 0.4);
+                    background-color: rgba(255, 255, 255, 0.5);
                 }
                 .noting .creating .text .writing textarea {
                     height: 100%;
@@ -563,7 +563,6 @@ export default {
         shootSign: 0, //录像进行时闪动标识
         camSet: "back",
         camSign: 1, //摄像头反转图标的透明度设置
-        camChoice: "/static/images/backCam.png", //摄像头前后置的图标设定
         camChange: 0,
         ifPreview: false,
         shootNow: false, //录像进行时标识，录像未进行时为false
@@ -707,8 +706,7 @@ export default {
                     }
                     if (res.duration > 500) {
                         this.playback.push({
-                            index: this.playback.length,
-                            url: res.tempFilePath,
+                            path: res.tempFilePath,
                             duration: res.duration,
                             opacity: 1
                         });
@@ -793,7 +791,7 @@ export default {
         
         imagePreview: function () {
             if (this.img.length > 0) {
-                return this.img[this.img.length - 1].url;
+                return this.img[this.img.length - 1].path;
             }else return "";
         },
 
@@ -1034,9 +1032,10 @@ export default {
             if (res.currentTarget.id) {
                 var index = res.currentTarget.id.match(/\d+/g)[0];
                 innerAudioContext.autoplay = true;
-                innerAudioContext.src = this.playback[index].url;
+                innerAudioContext.src = this.playback[index].path;
                 if ("playbackSign" in temp) {
                     clearTimeout(temp.playbackSign);
+                    this.playback.forEach(ele => ele.opacity = 1);
                     delete temp.playbackSign;
                 }
                 (function playing (flag, duration) {
@@ -1130,10 +1129,7 @@ export default {
                                 sourceType: ["album"],
                                 success: res => {
                                     res.tempFilePaths.forEach(ele => {
-                                        this.img.push({
-                                            index: this.img.length,
-                                            url: ele
-                                        });
+                                        this.img.push({ path: ele });
                                     });
                                     this.imgCurrent = this.img.length - 1;
                                     this.noting = "image";
@@ -1183,7 +1179,7 @@ export default {
         //图片记事的预览
         previewImage(res) {
             var index = res.currentTarget.id.match(/\d+/g)[0];
-            wx.previewImage({ urls: [this.img[index].url] });
+            wx.previewImage({ urls: [this.img[index].path] });
         },
         //图片记事的保存到本地与删除
         save_deleteImage(res) {
@@ -1193,7 +1189,7 @@ export default {
                 success: res => {
                     if (res.tapIndex === 0) {
                         wx.saveImageToPhotosAlbum({
-                            filePath: this.img[index].url,
+                            filePath: this.img[index].path,
                             success: res => {
                                 wx.showToast({
                                     title: "保存操作成功！",
@@ -1402,8 +1398,8 @@ export default {
                                 if (this[prop] instanceof Array) {
                                     this[prop].forEach((ele, index) => {
                                         wx.saveFile({
-                                            tempFilePath: ele.url,
-                                            success: res => this[prop][index].url = res.savedFilePath,
+                                            tempFilePath: ele.path,
+                                            success: res => this[prop][index].path = res.savedFilePath,
                                             complete: res => {
                                                 restToSave -= 1;
                                                 if (restToSave === 0) save_jump();
@@ -1458,10 +1454,10 @@ export default {
         preview(res) {
             if (this.img.length > 0) {
                 let imgQueue = [];
-                this.img.forEach(ele => imgQueue.push(ele.url));
+                this.img.forEach(ele => imgQueue.push(ele.path));
                 wx.previewImage({
                     urls: imgQueue,
-                    current: this.img[this.img.length - 1].url
+                    current: this.img[this.img.length - 1].path
                 });
             }else {
                 wx.showToast({
@@ -1482,7 +1478,7 @@ export default {
                             innerAudioContext.src = "/static/audio/shutter.mp3";
                             this.img.push({
                                 index: this.img.length,
-                                url: res.tempImagePath
+                                path: res.tempImagePath
                             });
                             wx.showToast({
                                 title: "第" + this.img.length + "张图片记事",

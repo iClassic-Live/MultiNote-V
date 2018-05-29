@@ -17,10 +17,10 @@ export default {
     var note = wx.getStorageSync("note");
     var fileHasSaved = [];
     note.forEach(ele => {
-      for (let prop in ele.note) {
+      for (let prop in ele) {
         if (prop === "record" || prop === "image") {
-          ele.note[prop].forEach(el => fileHasSaved.push(el.url));
-        }else if (prop === "video") fileHasSaved.push(ele.note[prop]);
+          ele[prop].forEach(el => fileHasSaved.push(el.path));
+        }else if (prop === "video") fileHasSaved.push(ele[prop]);
       }
     });
     wx.getSavedFileList({ 
@@ -58,7 +58,7 @@ export default {
     console.error("MultiNote onError", msg);
     (function showError () {
       wx.showToast({
-        title: "脚本错误！",
+        title: "运行出错！",
         image: "/static/images/error.png",
         mask: true,
         success: setTimeout(res => showError(), 1000)

@@ -1,7 +1,7 @@
 # MultiNote
 Mini Program: Make Noting Multiply
 
-Version: MultiNote V1.4.0 Dev
+Version: MultiNote V1.4.1 Build
 
 Discription: Base on Mpvue
 

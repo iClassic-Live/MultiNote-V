@@ -29,7 +29,7 @@
                     <view class="item" v-bind:id="'n' + index" v-for="(item, index) in (searching ? result : note)" :key="index"
                         v-bind:style="{opacity:item.style.opacity}" @touchstart="pullOutDel_Menu" @touchmove="pullOutDel_Menu" @touchend="pullOutDel_Menu"
                         @tap.stop="tapFn_on_item">
-                        <view class="title" v-bind:style="{'background-color': item.style.bgc || 'rgba(255, 255, 255, 0.4)'}">
+                        <view class="title" v-bind:style="{'background-color': item.style.bgc || 'rgba(255, 255, 255, 0.5)'}">
                             <text v-bind:style="{color:item.style.fontColor}">{{ item.title }}</text>
                         </view>
                         <view class="del" v-if="!searching" v-bind:id="'del_' + index"
@@ -80,9 +80,9 @@
                   </view>
                   
                   <view class="record"
-                      v-bind:style="{display:sw === 'record' ? '' : 'none'}">
+                      v-bind:style="{display:sw === 'record' ? '' : 'none'}" @tap.stop="getRecordInfo">
                       <button v-bind:id="'record-item_' + index" v-for="(item, index) in playback" 
-                      :key="index" v-bind:style="{opacity:item.opacity}" @tap="getRecordInfo">
+                      :key="index" v-bind:style="{opacity:item.opacity}" @tap.stop="getRecordInfo">
                       {{index + 1}}
                       </button>
                   </view>
@@ -92,7 +92,7 @@
                       indicator-dots="true" indicator-active-color="#fff">
                           <swiper-item class="image_cp" v-bind:id="'images_' + index"
                               v-for="(item, index) in img" :key="index" @longpress="getImageInfo">
-                              <img class="image_cp" v-bind:src="item.url" mode="aspectFit">
+                              <img class="image_cp" v-bind:src="item.path" mode="aspectFit">
                           </swiper-item>
                       </swiper>
                   </view>
@@ -216,7 +216,7 @@
         padding: 0 1%;
         border: 4.5rpx solid #8B4513;
         border-radius: 15rpx;
-        background-color: rgba(255, 255, 255, 0.4);
+        background-color: rgba(255, 255, 255, 0.5);
         white-space: nowrap;
       }
       .title text {
@@ -275,7 +275,7 @@
         margin: 25% 25%;
         height: 10vw;
         width: 10vw;
-        background: radial-gradient(circle ,rgba(255, 255, 255, 0.4), #00f);
+        background: radial-gradient(circle ,rgba(255, 255, 255, 0.5), #00f);
         border-radius: 50%;
       }
       .bgiChange_cp img {
@@ -302,7 +302,7 @@
     #main .content {
       height: 100%;
       width: 100%;
-      background-color: rgba(255, 255, 255, 0.4);
+      background-color: rgba(255, 255, 255, 0.5);
     }
 
     /* 头部 */
@@ -377,12 +377,13 @@
           align-items: center;
         }
         .record button {
-          height: 100rpx;
-          width: 100rpx;
+          height: 125rpx;
+          width: 125rpx;
           display: flex;
           justify-content: center;
           align-items: center;
           border-radius: 50%;
+          background-color: #F5F5DC;
         }
       
       /* 图片展示区 */
@@ -463,7 +464,7 @@ export default {
                     opacity: 1,
                     pullOutDelete: 0,
                     pullOutMenu: 0,
-                    bgc: "rgba(255, 255, 255, 0.4)"
+                    bgc: "rgba(255, 255, 255, 0.5)"
                 }
             }
         });
@@ -559,7 +560,7 @@ export default {
                                 title: ele.text.content,
                                 style: {
                                     opacity: 1,
-                                    bgc: "rgba(255, 255, 255, 0.4)"
+                                    bgc: "rgba(255, 255, 255, 0.5)"
                                 }
                             });
                         }
@@ -604,7 +605,7 @@ export default {
                 this.note[index].style.bgc = "#f00";
                 this.note[index].style.fontColor = "#fff";
               } else {
-                this.note[index].style.bgc = "rgba(255, 255, 255, 0.4)";
+                this.note[index].style.bgc = "rgba(255, 255, 255, 0.5)";
                 this.note[index].style.fontColor = "#000";
               }
               if (temp.times !== 3) {
@@ -673,7 +674,7 @@ export default {
             title: "读记事",
             content: "是否修改当前记事？",
             success: res => {
-                this.note[index].style.bgc = "rgba(255, 255, 255, 0.4)";
+                this.note[index].style.bgc = "rgba(255, 255, 255, 0.5)";
                 this.note[index].style.fontColor = "#000";
                 if (res.confirm) {
                     wx.setStorageSync("item_to_edit", index);
@@ -718,9 +719,9 @@ export default {
                             })()
                         });
                     }
-                    var removeSavedFile = url => {
+                    var removeSavedFile = path => {
                         wx.removeSavedFile({
-                            filePath: url,
+                            filePath: path,
                             complete: res => {
                                 restToDelete -= 1;
                                 if (restToDelete === 0 && this.note[index].style.opacity <= 0) rewriteData();
@@ -733,11 +734,11 @@ export default {
                             setTimeout(() => deleting.call(this), 25);
                         }else if (restToDelete === 0) rewriteData();
                     }).call(this);
-                    note.record.forEach(ele => removeSavedFile(ele.url));
-                    note.image.forEach(ele => removeSavedFile(ele.url));
+                    note.record.forEach(ele => removeSavedFile(ele.path));
+                    note.image.forEach(ele => removeSavedFile(ele.path));
                     removeSavedFile(note.video);
                 } else {
-                    this.note[index].style.bgc = "rgba(255, 255, 255, 0.4)";
+                    this.note[index].style.bgc = "rgba(255, 255, 255, 0.5)";
                     this.note[index].style.fontColor = "#000";
                 }
               }
@@ -757,7 +758,10 @@ export default {
               this.title = this.note[index].title;
               let note = temp.note[index];
               if (note.text.content.length > 0) this.text = note.text;
-              if (note.record.length > 0) this.playback = note.record;
+              if (note.record.length > 0) this.playback = note.record.map(ele => {
+                  ele.opacity = 1;
+                  return ele;
+              });
               if (note.image.length > 0) this.img = note.image;
               if (note.video.length > 0) this.video = note.video;
           } else {
@@ -844,12 +848,13 @@ export default {
           setImmediate(() => {
             if (!this.searching) {
                 this.sw = "overview";
-                if ("timerQueue" in this) {
-                    if (temp.timerQueue.length > 0) innerAudioContext.destroy();
-                    for (let value of temp.timerQueue) clearTimeout(value);
+                if ([...(temp.timerQueue || [])].length > 0) {
+                    if (temp.timerQueue.length > 0) innerAudioContext.stop();
+                    for (let timer of temp.timerQueue) clearTimeout(timer);
+                    temp.timerQueue = [];
                 }
                 if (this.title !== "") this.title = "";
-                if (this.text.content !== "") this.text.content = "";
+                if (this.text.content !== "") this.text = { content: "" };
                 if (this.playback.length > 0) this.playback = [];
                 if (this.img.length > 0) this.img = [];
                 if (this.video !== "") this.video = "";
@@ -880,32 +885,42 @@ export default {
       },
       //记事语音的操作
       getRecordInfo(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
-          var timeStamp = new Date().getTime();
-          if ("timerQueue" in temp) {
-              innerAudioContext.destroy();
-              for (let value of temp.timerQueue) clearTimeout(value);
-              this.playback.forEach((ele, id) => this.playback[id].opacity = 1);
-          } else temp.timerQueue = [];
-          innerAudioContext.autoplay = true;
-          innerAudioContext.src = this.playback[index].url;
-          (function breathingEffection () {
-              if (this.playback[index].opacity >= 1) temp.flag = true;
-              if (this.playback[index].opacity <= 0.3) temp.flag = false;
-              var timer = setTimeout(() => {
-                  if (new Date().getTime() - timeStamp < this.playback[index].duration - 35) {
-                      if (temp.flag) {
-                          this.playback[index].opacity -= 0.025;
-                      } else this.playback[index].opacity += 0.025;
-                      breathingEffection.call(this);
-                  } else {
-                      this.playback[index].opacity = 1;
-                      temp.timerQueue.splice(temp.timerQueue.indexOf(timer), 1);
-                      delete temp.flag;
-                  }
-              }, 35);
-              if (temp.timerQueue.indexOf(timer) === -1) temp.timerQueue.push(timer);
-          }).call(this);
+          if (!!res.currentTarget.id) {
+            var index = res.currentTarget.id.match(/\d+/g)[0];
+            var timeStamp = new Date().getTime();
+            if ([...(temp.timerQueue || [])].length > 0) {
+                innerAudioContext.stop();
+                for (let value of temp.timerQueue) clearTimeout(value);
+                this.playback.forEach(ele => ele.opacity = 1);
+                temp.timerQueue = [];
+            } else temp.timerQueue = [];
+            innerAudioContext.autoplay = true;
+            innerAudioContext.src = this.playback[index].path;
+            (function breathingEffection () {
+                if (this.playback[index].opacity >= 1) temp.flag = true;
+                if (this.playback[index].opacity <= 0.3) temp.flag = false;
+                var timer = setTimeout(() => {
+                    if (new Date().getTime() - timeStamp < this.playback[index].duration - 35) {
+                        if (temp.flag) {
+                            this.playback[index].opacity -= 0.025;
+                        } else this.playback[index].opacity += 0.025;
+                        breathingEffection.call(this);
+                    } else {
+                        this.playback[index].opacity = 1;
+                        temp.timerQueue.splice(temp.timerQueue.indexOf(timer), 1);
+                        delete temp.flag;
+                    }
+                }, 35);
+                if (temp.timerQueue.indexOf(timer) === -1) temp.timerQueue.push(timer);
+            }).call(this);
+          }else {
+            if ([...(temp.timerQueue || [])].length > 0) {
+                innerAudioContext.stop();
+                for (let value of temp.timerQueue) clearTimeout(value);
+                this.playback.forEach(ele => ele.opacity = 1);
+                temp.timerQueue = [];
+            } else temp.timerQueue = [];
+          }
       },
       //记事图片的操作
       getImageInfo(res) {
@@ -917,7 +932,7 @@ export default {
                   success: res => {
                       if (res.confirm) {
                           wx.saveImageToPhotosAlbum({
-                              filePath: this.img[index].url,
+                              filePath: this.img[index].path,
                               success: res => {
                                   wx.showToast({
                                       title: "保存图片成功！",
@@ -1044,7 +1059,15 @@ export default {
                   var whichCanShow = []; //可查看的记事类型的队列
                   //向上述队列推入所有当前可以查看的记事类型的标签
                   if (this.text.content !== "") whichCanShow.push("text");
-                  if (this.playback.length > 0) whichCanShow.push("record");
+                  if (this.playback.length > 0) {
+                      whichCanShow.push("record");
+                      if ([...(temp.timerQueue || [])].length > 0) {
+                          innerAudioContext.stop();
+                          for (let value of temp.timerQueue) clearTimeout(value);
+                          this.playback.forEach(ele => ele.opacity = 1);
+                          temp.timerQueue = [];
+                      }
+                  }
                   if (this.img.length > 0) whichCanShow.push("image");
                   if (this.video !== "") whichCanShow.push("video");
                   var index = whichCanShow.indexOf(this.sw);
