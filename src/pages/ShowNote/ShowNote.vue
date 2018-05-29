@@ -91,7 +91,7 @@
                       <swiper class="image_cp" circular="true" v-bind:current="imgCurrent"
                       indicator-dots="true" indicator-active-color="#fff">
                           <swiper-item class="image_cp" v-bind:id="'images_' + index"
-                              v-for="(item, index) in img" :key="index" @longpress="getImageInfo">
+                              v-for="(item, index) in img" :key="index" @tap="getImageInfo" @longpress="getImageInfo">
                               <img class="image_cp" v-bind:src="item.path" mode="aspectFit">
                           </swiper-item>
                       </swiper>
@@ -925,70 +925,73 @@ export default {
       //记事图片的操作
       getImageInfo(res) {
           var index = res.currentTarget.id.match(/\d+/g)[0];
-          function saveImage() {
-              wx.showModal({
-                  title: "读记事",
-                  content: "是否保存当前图片到本地？",
-                  success: res => {
-                      if (res.confirm) {
-                          wx.saveImageToPhotosAlbum({
-                              filePath: this.img[index].path,
-                              success: res => {
-                                  wx.showToast({
-                                      title: "保存图片成功！",
-                                      image: "/static/images/success.png"
-                                  });
-                              },
-                              fail: res => {
-                                  wx.showToast({
-                                      title: "保存图片失败！",
-                                      image: "/static/images/error.png"
-                                  });
-                              }
-                          });
-                      }
-                  }
-              });
+          if (res.type === "tap") {
+              wx.previewImage({ urls: [this.img[index].path] });
+          }else if (res.type === "longpress") {
+            var saveImage = () => {
+                wx.showModal({
+                    title: "读记事",
+                    content: "是否保存当前图片到本地？",
+                    success: res => {
+                        if (res.confirm) {
+                            wx.saveImageToPhotosAlbum({
+                                filePath: this.img[index].path,
+                                success: res => {
+                                    wx.showToast({
+                                        title: "保存图片成功！",
+                                        image: "/static/images/success.png"
+                                    });
+                                },
+                                fail: res => {
+                                    wx.showToast({
+                                        title: "保存图片失败！",
+                                        image: "/static/images/error.png"
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+            function failure() {
+                wx.showModal({
+                    title: "读记事",
+                    content: "警告：没有保存到相册的权限，无法保存图片到本地！",
+                    showCancel: false
+                });
+            }
+            wx.getSetting({
+                success: res => {
+                    if (!res.authSetting["scope.writePhotosAlbum"]) {
+                        wx.authorize({
+                            scope: 'scope.writePhotosAlbum',
+                            success: res => saveImage(),
+                            fail:res => {
+                                wx.openSetting({
+                                    success: res => {
+                                        if (res.authSetting["scope.writePhotosAlbum"]) {
+                                            saveImage();
+                                        } else failure();
+                                    },
+                                    fail: res => failure()
+                                });
+                            }
+                        });
+                    } else saveImage();
+                },
+                fail: res => {
+                    wx.showModal({
+                        title: "读记事",
+                        content: "警告：无法读取权限获取信息！",
+                        showCancel: false
+                    });
+                }
+            });
           }
-          function failure() {
-              wx.showModal({
-                  title: "读记事",
-                  content: "警告：没有保存到相册的权限，无法保存图片到本地！",
-                  showCancel: false
-              });
-          }
-          wx.getSetting({
-              success: res => {
-                  if (!res.authSetting['scope.writePhotosAlbum']) {
-                      wx.openSetting();
-                      wx.authorize({
-                          scope: 'scope.writePhotosAlbum',
-                          success: res => { saveImage.call(this); },
-                          fail:res => {
-                              wx.openSetting({
-                                  success: res => {
-                                      if (res.authSetting['scope.writePhotosAlbum']) {
-                                          saveImage.call(this);
-                                      } else failure();
-                                  },
-                                  fail: res => { failure(); }
-                              });
-                          }
-                      });
-                  } else saveImage.call(this);
-              },
-              fail: res => {
-                  wx.showModal({
-                      title: "读记事",
-                      content: "警告：无法读取权限获取信息！",
-                      showCancel: false
-                  });
-              }
-          });
       },
       //记事视频的操作
       getVideoInfo(res) {
-          function saveVideo () {
+          var saveVideo = () => {
               wx.showModal({
                   title: "读记事",
                   content: "是否保存当前视频到本地？",
@@ -1025,19 +1028,19 @@ export default {
                   if (!res.authSetting["scope.writePhotosAlbum"]) {
                       wx.authorize({
                           scope: 'scope.writePhotosAlbum',
-                          success: res => saveVideo.call(this),
+                          success: res => saveVideo(),
                           fail: res => {
                               wx.openSetting({
                                   success: res => {
                                       if (res.authSetting['scope.writePhotosAlbum']) {
-                                          saveVideo.call(this);
+                                          saveVideo();
                                       } else failure();
                                   },
                                   fail:res => failure()
                               });
                           }
                       });
-                  } else saveVideo.call(this);
+                  } else saveVideo();
               },
               fail: res => {
                   wx.showModal({
