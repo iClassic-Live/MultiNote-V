@@ -26,19 +26,19 @@
 
                 <scroll-view class="list" scroll-y="true" v-bind:scroll-into-view="target"
                   @tap="tapFn_on_overview">
-                    <view class="item" v-bind:id="'n' + item.id" v-for="item in (searching ? result : note)" :key="item.id"
+                    <view class="item" v-bind:id="'n' + index" v-for="(item, index) in (searching ? result : note)" :key="index"
                         v-bind:style="{opacity:item.style.opacity}" @touchstart="pullOutDel_Menu" @touchmove="pullOutDel_Menu" @touchend="pullOutDel_Menu"
                         @tap.stop="tapFn_on_item">
                         <view class="title" v-bind:style="{'background-color': item.style.bgc || 'rgba(255, 255, 255, 0.4)'}">
-                            <text v-bind:style="{color:item.style.fontColor}">{{ searching ? item.title : item.note.title}}</text>
+                            <text v-bind:style="{color:item.style.fontColor}">{{ item.title }}</text>
                         </view>
-                        <view class="del" v-bind:id="'del_' + item.id" v-if="!searching"
+                        <view class="del" v-if="!searching" v-bind:id="'del_' + index"
                         v-bind:style="{left: -(120 - item.style.pullOutDelete) + 'rpx'}" @tap.stop="deleteNote">删除</view>
                         <view class="menu" v-if="!searching" v-bind:style="{right: -(330 - item.style.pullOutMenu) + 'rpx'}">
-                            <img v-bind:id="'text_' + item.id" mode="aspectFit" src="/static/images/text.png" @tap.stop="getContent">
-                            <img v-bind:id="'record_'+ item.id" mode="aspectFit" src="/static/images/record.png" @tap.stop="getContent">
-                            <img v-bind:id="'image_' + item.id" mode="aspectFit" src="/static/images/image.png" @tap.stop="getContent">
-                            <img v-bind:id="'video_' + item.id" mode="aspectFit" src="/static/images/video.png" @tap.stop="getContent">
+                            <img v-bind:id="'text_' + index" mode="aspectFit" src="/static/images/text.png" @tap.stop="getContent">
+                            <img v-bind:id="'record_'+ index" mode="aspectFit" src="/static/images/record.png" @tap.stop="getContent">
+                            <img v-bind:id="'image_' + index" mode="aspectFit" src="/static/images/image.png" @tap.stop="getContent">
+                            <img v-bind:id="'video_' + index" mode="aspectFit" src="/static/images/video.png" @tap.stop="getContent">
                         </view>
                     </view>
                 </scroll-view>
@@ -81,8 +81,8 @@
                   
                   <view class="record"
                       v-bind:style="{display:sw === 'record' ? '' : 'none'}">
-                      <button v-bind:id="'record-item_' + item.index" v-bind:src="item.url" v-for="item in playback" 
-                      :key="item" v-bind:style="{opacity:item.opacity}" @tap="getRecordInfo">
+                      <button v-bind:id="'record-item_' + index" v-for="(item, index) in playback" 
+                      :key="index" v-bind:style="{opacity:item.opacity}" @tap="getRecordInfo">
                       {{index + 1}}
                       </button>
                   </view>
@@ -90,8 +90,8 @@
                   <view class="image image_cp" v-bind:style="{display:sw === 'image' ? 'block' : 'none'}">
                       <swiper class="image_cp" circular="true" v-bind:current="imgCurrent"
                       indicator-dots="true" indicator-active-color="#fff">
-                          <swiper-item class="image_cp" v-bind:id="'images_' + item.index"
-                              v-for="item in img" :key="item.index" @longpress="getImageInfo">
+                          <swiper-item class="image_cp" v-bind:id="'images_' + index"
+                              v-for="(item, index) in img" :key="index" @longpress="getImageInfo">
                               <img class="image_cp" v-bind:src="item.url" mode="aspectFit">
                           </swiper-item>
                       </swiper>
@@ -409,37 +409,39 @@ var temp;  //临时数据存储器
 export default {
 
 
-    data: {
+    data() {
+        return {
 
-      ifReady: false,
+            ifReady: false,
 
-      duration: 0,
-      current: wx.getStorageSync("bgiCurrent"),
-      bgiQueue: wx.getStorageSync("bgiQueue"),
-      autoplay: false,
-      bgiChange: 0,
+            duration: 0,
+            current: wx.getStorageSync("bgiCurrent"),
+            bgiQueue: wx.getStorageSync("bgiQueue"),
+            autoplay: false,
+            bgiChange: 0,
 
-      sw: "overview",
+            sw: "overview",
 
-      searching: false,
-      searchType: "T",
-      input: "",
-      result: new Array(),
-      target: "",
+            searching: false,
+            searchType: "T",
+            input: "",
+            result: new Array(),
+            target: "",
 
-      note: new Array(),
+            note: new Array(),
 
-      title: "",
+            title: "",
 
-      text: { content: "" },
+            text: { content: "" },
 
-      playback: new Array(),
+            playback: new Array(),
 
-      img: new Array(),
-      imgCurrent: 0,
+            img: new Array(),
+            imgCurrent: 0,
 
-      video: ""
+            video: ""
 
+        }
     },
 
 
@@ -449,28 +451,31 @@ export default {
         wx.hideLoading();
         var bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
-        var note = wx.getStorageSync("note");
-        note.forEach((ele, index) => {
-            ele.note.record.forEach((ele, id) => {
-                ele.index = id;
-                ele.opacity = 1;
-            });
-            ele.note.image.forEach((ele, id) => ele.index = id);
-            ele.style = new Object();
-            ele.style.opacity = 1;
-            ele.style.pullOutDelete = 0;
-            ele.style.pullOutMenu = 0;
-            ele.style.bgc = "rgba(255, 255, 255, 0.5)";
-        });
-        this.note = note;
 
-        this.current = wx.getStorageSync("bgiCurrent");
         this.searchType = "T";
         this.target = "";
 
+        var storage = wx.getStorageSync("note");
+        this.note = storage.map(ele => {
+            return {
+                title: ele.title,
+                style: {
+                    opacity: 1,
+                    pullOutDelete: 0,
+                    pullOutMenu: 0,
+                    bgc: "rgba(255, 255, 255, 0.4)"
+                }
+            }
+        });
+
         temp = {  //初始化临时数据存储器
 
-          anchor: [null, null, null] //相应滑动操作的起始标识
+          anchor: [null, null, null], //相应滑动操作的起始标识
+
+          note: storage.map(ele => { //所有记事的内容
+                delete ele.title;
+                return ele;
+          })
 
         }
     },
@@ -542,24 +547,25 @@ export default {
             });
             var reg = new RegExp().compile(content.join(""));
             var result = [];
-            this.note.forEach((ele, index) => {
-              let title = (() => {
-                switch(searchType) {
-                  case "T": { return ele.note.title; }break;
-                  case "C": { return ele.note.text.content; }break;
-                }
-              })();
-              if (reg.test(title)) {
-                result.push({
-                  id: ele.id,
-                  title: title,
-                  style: {
-                    opacity: 1,
-                    bgc: "rgba(255, 255, 255, 0.4)"
-                  }
-                });
-              }
-            });
+            switch(this.searchType) {
+                case "T": {
+                    this.note.forEach(ele => reg.test(ele.title) ? result.push(ele) : "");
+                }break;
+                case "C": {
+                    temp.note.forEach((ele, index) => {
+                        if (reg.test(ele.text.content)) {
+                            result.push({
+                                id: "n" + index,
+                                title: ele.text.content,
+                                style: {
+                                    opacity: 1,
+                                    bgc: "rgba(255, 255, 255, 0.4)"
+                                }
+                            });
+                        }
+                    });
+                }break;
+            }
             this.result = result;
           }else this.result = [];
         }
@@ -592,7 +598,7 @@ export default {
         this.target = res.currentTarget.id;
         switch(this.searchType) {
           case "T": {
-            (function tips() {
+            (function show() {
               if (!temp.hasOwnProperty("times")) temp.times = 0;
               if (temp.times % 2 === 0) {
                 this.note[index].style.bgc = "#f00";
@@ -603,14 +609,14 @@ export default {
               }
               if (temp.times !== 3) {
                 ++temp.times;
-                setTimeout(() => { tips.call(this); }, 250);
+                setTimeout(() => show.call(this), 250);
               } else delete temp.times;
             }).call(this);
           }break;
           case "C": {
-            var note = this.note[index].note;
             this.sw = "text";
-            this.title = note.title;
+            this.title = this.note[index].title;
+            var note = temp.note[index];
             this.text = note.text;
             if (note.record.length > 0) this.playback = note.record;
             if (note.image.length > 0) this.img = note.image;
@@ -692,14 +698,13 @@ export default {
                         title: "开始删除本记事",
                         mask: true
                     });
-                    var note = this.note[index].note;
+                    var note = temp.note[index];
                     var restToDelete = note.record.length + note.image.length + 1;
                     var rewriteData = () => {
                         this.note.splice(index, 1);
-                        this.note.forEach((ele, id) => ele.id = id);
+                        temp.note.splice(index, 1);
                         var storage = wx.getStorageSync("note");
                         storage.splice(index, 1);
-                        storage.forEach((ele, id) => ele.id = id);
                         wx.setStorageSync("note", storage);
                         wx.hideLoading();
                         wx.showToast({
@@ -744,13 +749,13 @@ export default {
           var index = label.match(/\d+/g)[0];
           label = label.slice(0, label.indexOf("_"));
           if (label === "text") {
-              var condition = this.note[index].note.text.content.length > 0
-          } else var condition = this.note[index].note[label].length > 0;
+              var condition = temp.note[index].text.content.length > 0
+          } else var condition = temp.note[index][label].length > 0;
           if (condition) {
               this.hideMenu();
               this.sw = label;
-              this.title = this.note[index].note.title;
-              let note = JSON.parse(JSON.stringify(this.note[index].note));
+              this.title = this.note[index].title;
+              let note = temp.note[index];
               if (note.text.content.length > 0) this.text = note.text;
               if (note.record.length > 0) this.playback = note.record;
               if (note.image.length > 0) this.img = note.image;
@@ -880,9 +885,7 @@ export default {
           if ("timerQueue" in temp) {
               innerAudioContext.destroy();
               for (let value of temp.timerQueue) clearTimeout(value);
-              this.playback.forEach((ele, id, origin) => {
-                  if (id !== index && ele.opacity < 1) this.playback[id].opacity = 1;
-              });
+              this.playback.forEach((ele, id) => this.playback[id].opacity = 1);
           } else temp.timerQueue = [];
           innerAudioContext.autoplay = true;
           innerAudioContext.src = this.playback[index].url;

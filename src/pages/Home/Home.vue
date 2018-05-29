@@ -84,12 +84,14 @@
 <script>
 export default {
 
-  data: {
+  data() {
+    return {
 
-    version: "MultiNote V1.3.5 Build",
+      version: "MultiNote V1.4.0 Dev",
 
-    backgroundImage: wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")]
-
+      backgroundImage: wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")]
+      
+    }
   },
 
 

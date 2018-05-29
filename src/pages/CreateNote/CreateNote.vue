@@ -82,7 +82,7 @@
                         </view>
 
                         <view class="playback ele" @tap="playbackFn">
-                            <button v-bind:id="'rec_' + item.index" v-bind:src="item.url" v-for="item in playback" :key="item.url"
+                            <button v-bind:id="'rec_' + index" v-bind:src="item.url" v-for="(item, index) in playback" :key="index"
                              v-bind:style="{opacity:item.opacity}" @tap.stop="playbackFn" @longpress.stop="deleteRecord">
                              {{index + 1}}</button>
                         </view>
@@ -92,7 +92,7 @@
                     <view class="photo sel" v-if="noting === 'image'">
                         <swiper v-if="!reRender" v-bind:current="imgCurrent" circular="true"
                         indicator-dots="true" indicator-active-color="#fff" @animationfinish="setImgCurrent">
-                            <swiper-item v-bind:id="'image_' + item.index" v-for="item in img" :key="item.url" @tap="previewImage" @longpress="save_deleteImage">
+                            <swiper-item v-bind:id="'image_' + index" v-for="(item, index) in img" :key="index" @tap="previewImage" @longpress="save_deleteImage">
                                 <img mode="aspectFit" v-bind:src="item.url">
                             </swiper-item>
                         </swiper>
@@ -525,49 +525,51 @@ var temp;  //临时数据存储器
 export default {
 
 
-    data: {
+    data() {
+      return {
 
-      ifReady: false,
+        ifReady: false,
 
-      duration: 0,
-      current: wx.getStorageSync("bgiCurrent"),
-      bgiQueue: wx.getStorageSync("bgiQueue"),
-      autoplay: false,
+        duration: 0,
+        current: wx.getStorageSync("bgiCurrent"),
+        bgiQueue: wx.getStorageSync("bgiQueue"),
+        autoplay: false,
 
-      noting: "menu",
-      bgiChange: 0,
-      
-      title: "",
-      titleDefault: "记事标题",
+        noting: "menu",
+        bgiChange: 0,
+        
+        title: "",
+        titleDefault: "记事标题",
 
-      text: new Object(),
-      font: [ //字体样式选择器相应选择项的提示序列
-          ["超小号", "小号", "默认", "大号", "超大号"],
-          ["轻盈", "默认", "粗壮"],
-          ["默认", "中国红", "罗兰紫", "深空蓝", "森林绿", "巧克力棕"]
-       ],
+        text: new Object(),
+        font: [ //字体样式选择器相应选择项的提示序列
+            ["超小号", "小号", "默认", "大号", "超大号"],
+            ["轻盈", "默认", "粗壮"],
+            ["默认", "中国红", "罗兰紫", "深空蓝", "森林绿", "巧克力棕"]
+        ],
 
-      playback: [],
-      breathing: null,
-      rotating: null,
+        playback: [],
+        breathing: null,
+        rotating: null,
 
-      img: [],
-      imgCurrent: 0,
-      reRender: false,
+        img: [],
+        imgCurrent: 0,
+        reRender: false,
 
-      video: "",
+        video: "",
 
-      //相机组件功能初始化
-      flash: "off", //闪光灯设置，默认关闭
-      shootSign: 0, //录像进行时闪动标识
-      camSet: "back",
-      camSign: 1, //摄像头反转图标的透明度设置
-      camChoice: "/static/images/backCam.png", //摄像头前后置的图标设定
-      camChange: 0,
-      ifPreview: false,
-      shootNow: false, //录像进行时标识，录像未进行时为false
-      quality: "Normal", //照片质量设定，默认为普通
+        //相机组件功能初始化
+        flash: "off", //闪光灯设置，默认关闭
+        shootSign: 0, //录像进行时闪动标识
+        camSet: "back",
+        camSign: 1, //摄像头反转图标的透明度设置
+        camChoice: "/static/images/backCam.png", //摄像头前后置的图标设定
+        camChange: 0,
+        ifPreview: false,
+        shootNow: false, //录像进行时标识，录像未进行时为false
+        quality: "Normal", //照片质量设定，默认为普通
 
+      }
     },
 
 
@@ -636,18 +638,14 @@ export default {
             }
         });
         if (wx.getStorageInfoSync().keys.indexOf("item_to_edit") !== -1) {
-            var note = wx.getStorageSync("note")[wx.getStorageSync("item_to_edit")].note;
+            var note = wx.getStorageSync("note")[wx.getStorageSync("item_to_edit")];
             this.title = note.title;
             this.text = note.text;
-            note.record.forEach((ele, index) => {
-                this.playback[index] = ele;
-                this.playback[index].index = index;
-                this.playback[index].opacity = 1;
+            this.playback = note.record.map(ele => {
+                ele.opacity = 1;
+                return ele;
             });
-            note.image.forEach((ele, index) => {
-                this.img[index] = ele;
-                this.img[index].index = index;
-            });
+            this.img = note.image;
             this.video = note.video;
         } else {
             this.title = (function () {
@@ -1078,7 +1076,6 @@ export default {
                             wx.hideLoading();
                             if (this.playback[index].opacity <= 0) {
                                 this.playback.splice(index, 1);
-                                this.playback.forEach((ele, id) => ele.index !== id ? ele.id = index : "");
                             }else deleteRecord.call(this);
                         }, 50);
                     }).call(this);
@@ -1216,9 +1213,7 @@ export default {
                         this.reRender = true;
                         if (this.imgCurrent > 0) this.imgCurrent -= 1;
                         this.img.splice(index, 1);
-                        if (this.img.length > 0) {
-                            this.img.forEach((ele, id) => ele.index !== id ? ele.index = id : "");
-                        }else this.noting = "menu";
+                        if (this.img.length === 0) this.noting = "menu";
                         this.reRender = false;
                     }
                 }
@@ -1312,14 +1307,16 @@ export default {
 
         /* 菜单栏的返回 */
         backToMenu(res) {
-            if ("playbackSign" in temp) {
-                clearTimeout(temp.playbackSign);
-                delete temp.playbackSign;
-                this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : "");
-                innerAudioContext.stop();
-            }
-            this.noting = "menu";
-            if (this.imgCurrent !== 0) this.mgCurrent = 0;
+            setTimeout(() => {
+                if ("playbackSign" in temp) {
+                    clearTimeout(temp.playbackSign);
+                    delete temp.playbackSign;
+                    this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : "");
+                    innerAudioContext.stop();
+                }
+                if (this.imgCurrent !== 0) this.mgCurrent = 0;
+                this.noting = "menu";
+            }, Math.random() * 10);
         },
 
         /* 背景图的切换 */
@@ -1377,27 +1374,18 @@ export default {
                             wx.removeStorageSync("item_to_edit");
                             if (!id && id !== 0) id = note.length;
                             var item = {
-                                id: id,
-                                note: {
-                                    title: this.title,
-                                    text: this.text,
-                                    record: (() => {
-                                        let record = [];
-                                        this.playback.forEach(ele => {
-                                            record.push({
-                                                url: ele.url,
-                                                duration: ele.duration
-                                            });
-                                        });
-                                        return record;
-                                    })(),
-                                    image: (() => {
-                                        let image = [];
-                                        this.img.forEach(ele => image.push({ url: ele.url }));
-                                        return image;
-                                    })(),
-                                    video: this.video
-                                }
+                                title: this.title,
+                                text: this.text,
+                                record: this.playback.map(ele => {
+                                    delete ele.index;
+                                    delete ele.opacity;
+                                    return ele;
+                                }),
+                                image: this.img.map(ele => {
+                                    delete ele.index;
+                                    return ele;
+                                }),
+                                video: this.video
                             }
                             note[id] = item;
                             wx.setStorageSync("note", note);
