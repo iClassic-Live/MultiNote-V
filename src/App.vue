@@ -26,7 +26,7 @@ export default {
     wx.getSavedFileList({ 
       success: res => {
         res.fileList.forEach(ele => {
-          if (fileHasSaved.indexOf(ele.filePath) === -1) wx.removeSavedFile({ filePath: ele.filePath });
+          if (fileHasSaved.indexOf(ele.filePath) === -1) wx.removeSavedFile({ filePath: ele.filePath || "" });
         });
       },
       fail: res => console.log("fail to get saved file list")

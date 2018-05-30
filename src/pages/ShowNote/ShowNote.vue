@@ -721,7 +721,7 @@ export default {
                     }
                     var removeSavedFile = path => {
                         wx.removeSavedFile({
-                            filePath: path,
+                            filePath: path || "",
                             complete: res => {
                                 restToDelete -= 1;
                                 if (restToDelete === 0 && this.note[index].style.opacity <= 0) rewriteData();

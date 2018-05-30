@@ -993,7 +993,7 @@ export default {
                 wx.showModal({
                     title: "语音记事",
                     content: "是否清空语音记事？",
-                    success: res => res.confirm ? this.playback = [] : ""
+                    success: res => res.confirm ? this.playback = [] : false
                 });
             }
         },
@@ -1054,7 +1054,7 @@ export default {
             }else if ("playbackSign" in temp) {
                 clearTimeout(temp.playbackSign);
                 delete temp.playbackSign;
-                this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : "");
+                this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : false);
                 innerAudioContext.stop();
             }
         },
@@ -1230,7 +1230,7 @@ export default {
                             wx.showModal({
                                 title: "视频记事",
                                 content: "是否即刻预览视频？",
-                                success: res => res.confirm ? this.noting = "video" : ""
+                                success: res => res.confirm ? this.noting = "video" : false
                             });
                         }
                     });
@@ -1252,7 +1252,7 @@ export default {
                 wx.showModal({
                     title: "视频记事",
                     content: "是否清空视频记事？",
-                    success: res => res.confirm ? this.video = "" : ""
+                    success: res => res.confirm ? this.video = "" : false
                 });
             }
         },
@@ -1307,7 +1307,7 @@ export default {
                 if ("playbackSign" in temp) {
                     clearTimeout(temp.playbackSign);
                     delete temp.playbackSign;
-                    this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : "");
+                    this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : false);
                     innerAudioContext.stop();
                 }
                 if (this.imgCurrent !== 0) this.mgCurrent = 0;
@@ -1360,8 +1360,8 @@ export default {
                 success: res => {
                     if (this.saveSign === "save" && res.confirm) {
                         wx.showLoading({
-                        title: "正在保存记事！",
-                        mask: true
+                            title: "正在保存记事！",
+                            mask: true
                         });
                         var restToSave = this.playback.length + this.img.length + 1;
                         var save_jump = () => {
@@ -1399,7 +1399,7 @@ export default {
                                     this[prop].forEach((ele, index) => {
                                         wx.saveFile({
                                             tempFilePath: ele.path,
-                                            success: res => this[prop][index].path = res.savedFilePath,
+                                            success: res => "savedFilePath" in res ? this[prop][index].path = res.savedFilePath : false,
                                             complete: res => {
                                                 restToSave -= 1;
                                                 if (restToSave === 0) save_jump();
@@ -1409,7 +1409,7 @@ export default {
                                 }else {
                                     wx.saveFile({
                                         tempFilePath: this.video,
-                                        success: res => this.video = res.savedFilePath,
+                                        success: res => "savedFilePath" in res ? this.video = res.savedFilePath : false,
                                         complete: res => {
                                             restToSave -= 1;
                                             if (restToSave === 0) save_jump();
