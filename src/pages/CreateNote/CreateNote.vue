@@ -21,7 +21,7 @@
                 </view>
 
                 <view class="selection">
-                    <view class="text sel" @tap="getTextFn" @longpress="getTextFn" v-bind:style="{border:'9rpx solid ' + (text.content.length > 0 ? 'red' : 'green')}">
+                    <view class="text sel" @tap="getTextFn" @longpress="getTextFn" v-bind:style="{border:'9rpx solid ' + (text.content.length > 0 ? 'orange' : 'green')}">
                         <img src="/static/images/text.png">
                     </view>
                     <view class="record sel" @tap="getRecordFn" @longpress="getRecordFn" v-bind:style="{border:'9rpx solid ' + playbackStorageSign}">
