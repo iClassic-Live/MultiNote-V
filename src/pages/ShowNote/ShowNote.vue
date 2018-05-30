@@ -848,7 +848,7 @@ export default {
           setImmediate(() => {
             if (!this.searching) {
                 this.sw = "overview";
-                if ([...(temp.timerQueue || [])].length > 0) {
+                if ((temp.timerQueue || []).length > 0) {
                     if (temp.timerQueue.length > 0) innerAudioContext.stop();
                     for (let timer of temp.timerQueue) clearTimeout(timer);
                     temp.timerQueue = [];
@@ -888,7 +888,7 @@ export default {
           if (!!res.currentTarget.id) {
             var index = res.currentTarget.id.match(/\d+/g)[0];
             var timeStamp = new Date().getTime();
-            if ([...(temp.timerQueue || [])].length > 0) {
+            if ((temp.timerQueue || []).length > 0) {
                 innerAudioContext.stop();
                 for (let value of temp.timerQueue) clearTimeout(value);
                 this.playback.forEach(ele => ele.opacity = 1);
@@ -914,7 +914,7 @@ export default {
                 if (temp.timerQueue.indexOf(timer) === -1) temp.timerQueue.push(timer);
             }).call(this);
           }else {
-            if ([...(temp.timerQueue || [])].length > 0) {
+            if ((temp.timerQueue || []).length > 0) {
                 innerAudioContext.stop();
                 for (let value of temp.timerQueue) clearTimeout(value);
                 this.playback.forEach(ele => ele.opacity = 1);
@@ -1064,7 +1064,7 @@ export default {
                   if (this.text.content !== "") whichCanShow.push("text");
                   if (this.playback.length > 0) {
                       whichCanShow.push("record");
-                      if ([...(temp.timerQueue || [])].length > 0) {
+                      if ((temp.timerQueue || []).length > 0) {
                           innerAudioContext.stop();
                           for (let value of temp.timerQueue) clearTimeout(value);
                           this.playback.forEach(ele => ele.opacity = 1);
