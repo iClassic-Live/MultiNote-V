@@ -89,7 +89,7 @@
 
                   <view class="image image_cp" v-bind:style="{display:sw === 'image' ? 'block' : 'none'}">
                       <swiper class="image_cp" circular="true" v-bind:current="imgCurrent"
-                      indicator-dots="true" indicator-active-color="#fff">
+                      indicator-dots="true" indicator-active-color="#fff" @change="setImgCurrent">
                           <swiper-item class="image_cp" v-bind:id="'images_' + index"
                               v-for="(item, index) in img" :key="index" @tap="getImageInfo" @longpress="getImageInfo">
                               <img class="image_cp" v-bind:src="item.path" mode="aspectFit">
@@ -988,6 +988,10 @@ export default {
                 }
             });
           }
+      },
+      //当前图片展示滑块索引的同步
+      setImgCurrent(res) {
+          this.imgCurrent = res.mp.detail.current;
       },
       //记事视频的操作
       getVideoInfo(res) {

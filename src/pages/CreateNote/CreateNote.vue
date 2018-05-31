@@ -1216,7 +1216,9 @@ export default {
             });
         },
         //当前图片展示滑块索引的同步
-        setImgCurrent: res => this.a.data.imgCurrent = res.mp.detail.current,
+        setImgCurrent(res) {
+            this.imgCurrent = res.mp.detail.current;
+        },
 
         /* 视频记事 */
         //视频记事的创建与清除
