@@ -780,7 +780,7 @@ export default {
 
         saveSign: function () {
             let condition = [this.text.content, this.playback, this.img, this.video];
-            if (this.title.length > 0 && condition.some(ele => { return ele.length > 0 })) {
+            if (this.title.length > 0 && condition.some(ele => ele.length > 0)) {
                 return "save";
             }else return "cancel";
         },
@@ -1360,6 +1360,12 @@ export default {
                 title: "写记事",
                 content: "是否" + (this.saveSign === "save" ? "保存" : "取消") + "当前记事？",
                 success: res => {
+                    function redirecting () {  //页面重定向函数及删除记录需要修改的记事的序号的缓存
+                        wx.removeStorageSync("item_to_edit");
+                        if (wx.getStorageSync("note").length > 0) {
+                            wx.redirectTo({ url: "../ShowNote/main" });
+                        }else wx.redirectTo({ url: "../Home/main" });
+                    }
                     if (this.saveSign === "save" && res.confirm) {
                         wx.showLoading({
                             title: "正在保存记事！",
@@ -1368,8 +1374,7 @@ export default {
                         var restToSave = this.playback.length + this.img.length + 1;
                         var save_jump = () => {
                             var note = wx.getStorageSync("note");
-                            var id = wx.getStorageSync("item_to_edit");                        
-                            wx.removeStorageSync("item_to_edit");
+                            var id = wx.getStorageSync("item_to_edit");
                             if (!id && id !== 0) id = note.length;
                             var item = {
                                 title: this.title,
@@ -1392,7 +1397,7 @@ export default {
                                 title: "记事保存成功！",
                                 image: "/static/images/success.png",
                                 mask: true,
-                                success: setTimeout(() => wx.redirectTo({ url: "../ShowNote/main" }), 1500)
+                                success: setTimeout(() => redirecting(), 1250)
                             });
                         }
                         for (let prop in this) {
@@ -1420,12 +1425,33 @@ export default {
                                 }
                             }
                         }
-                    }else if ((this.saveSign === "save" && !res.confirm) ||
-                            (this.saveSign === "cancel" && res.confirm)) {
-                        wx.removeStorageSync("item_to_edit");
-                        if (wx.getStorageSync("note").length > 0) {
-                            wx.redirectTo({ url: "../ShowNote/main" });
-                        }else wx.redirectTo({ url: "../Home/main" });
+                    }else if (this.saveSign === "save" && !res.confirm) {
+                        redirecting();
+                    }else if (this.saveSign === "cancel" && res.confirm) {
+                        let condition = [this.text.content === "",
+                                         this.playback.length === 0,
+                                         this.img.length === 0,
+                                         this.video === ""].every(ele => ele === true);
+                        let noteIndex = parseInt(wx.getStorageSync("item_to_edit"));
+                        if (noteIndex !== NaN && condition) {
+                            wx.showModal({
+                                title: "写记事",
+                                content: "当前记事已空，是否彻底删除当前记事？",
+                                success(res) {
+                                    if (res.confirm) {
+                                        var storage = wx.getStorageSync("note");
+                                        storage.splice(noteIndex, 1);
+                                        wx.setStorageSync("note", storage);
+                                        wx.showToast({
+                                            title: "记事删除成功！",
+                                            image: "/static/images/success.png",
+                                            mask: true,
+                                            success: res => setTimeout(() => redirecting(), 1250)
+                                        });
+                                    }else redirecting();
+                                }
+                            });
+                        }else redirecting();
                     }
                 }
             });
