@@ -29,7 +29,7 @@
                     <view class="item" v-bind:id="'n' + index" v-for="(item, index) in (searching ? result : note)" :key="index"
                         v-bind:style="{opacity:item.style.opacity}" @touchstart="pullOutDel_Menu" @touchmove="pullOutDel_Menu" @touchend="pullOutDel_Menu"
                         @tap.stop="tapFn_on_item">
-                        <view class="title" v-bind:style="{'background-color': item.style.bgc || 'rgba(255, 255, 255, 0.5)'}">
+                        <view class="title" v-bind:style="{'background-color': item.style.bgc}">
                             <text v-bind:style="{color:item.style.fontColor}">{{ item.title }}</text>
                         </view>
                         <view class="del" v-if="!searching" v-bind:id="'del_' + index"
@@ -172,6 +172,8 @@
       .search .input input {
         height: 100%;
         width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
       }
       .search .setSearchType {
         box-sizing: border-box;
@@ -224,6 +226,7 @@
         width: 100%;
         display: flex;
         align-items: center;
+        overflow: hidden;
       }
       .item .del {
         position: absolute;
@@ -553,11 +556,13 @@ export default {
                     this.note.forEach(ele => reg.test(ele.title) ? result.push(ele) : "");
                 }break;
                 case "C": {
-                    temp.note.forEach((ele, index) => {
+                    temp.note.forEach(ele => {
                         if (reg.test(ele.text.content)) {
+                            let contentIndex = ele.text.content.indexOf(this.input);
+                            let title = ele.text.content.substring(contentIndex);
+                            if (contentIndex > 0) title = "..." + title;
                             result.push({
-                                id: "n" + index,
-                                title: ele.text.content,
+                                title: title,
                                 style: {
                                     opacity: 1,
                                     bgc: "rgba(255, 255, 255, 0.5)"
