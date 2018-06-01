@@ -1433,7 +1433,7 @@ export default {
                                          this.img.length === 0,
                                          this.video === ""].every(ele => ele === true);
                         let noteIndex = parseInt(wx.getStorageSync("item_to_edit"));
-                        if (noteIndex !== NaN && condition) {
+                        if (Number.isInteger(noteIndex) && condition) {
                             wx.showModal({
                                 title: "写记事",
                                 content: "当前记事已空，是否彻底删除当前记事？",
