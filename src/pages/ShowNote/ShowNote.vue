@@ -932,10 +932,11 @@ export default {
       },
       //记事图片的操作
       getImageInfo(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
           if (res.type === "tap") {
+              var index = res.currentTarget.id.match(/\d+/g)[0];
               wx.previewImage({ urls: [this.img[index].path] });
           }else if (res.type === "longpress") {
+            var index = res.currentTarget.id.match(/\d+/g)[0];
             var saveImage = () => {
                 wx.showModal({
                     title: "读记事",

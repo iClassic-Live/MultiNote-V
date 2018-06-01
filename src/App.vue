@@ -57,12 +57,11 @@ export default {
   onError(msg) {
     console.error("MultiNote onError", msg);
     (function showError () {
-      wx.showModal({
+      wx.showToast({
         title: "运行出错！",
-        content: msg
-        // image: "/static/images/error.png",
-        // mask: true,
-        // success: setTimeout(res => showError(), 1000)
+        image: "/static/images/error.png",
+        mask: true,
+        success: setTimeout(res => showError(), 1250)
       });
     })()
   }
