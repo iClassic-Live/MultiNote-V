@@ -530,70 +530,73 @@ export default {
 
       //记事检索功能
       search(res) {
-        var showSearchType = () => {
-            wx.showToast({
-              title: "检索记事" + (() => {
-                switch(this.searchType) {
-                  case "T": { return "标题" }break;
-                  case "C": { return "文本" }break;
-                }
-              })(),
-              icon: "none"
-            });
-        }
-        var getResult = (input, searchType) => {
-          if (input !== undefined) {
-            var content = String(input).split("");
-          } else var content = [];
-          if (content.length > 0) {
-            content.forEach((ele, index) => {
-              if ("*.?+$^[](){}|\\/".split("").indexOf(ele) !== -1) content[index] = "\\" + ele;
-            });
-            var reg = new RegExp().compile(content.join(""));
-            var result = [];
-            switch(this.searchType) {
-                case "T": {
-                    this.note.forEach(ele => reg.test(ele.title) ? result.push(ele) : "");
-                }break;
-                case "C": {
-                    temp.note.forEach(ele => {
-                        if (reg.test(ele.text.content)) {
-                            let contentIndex = ele.text.content.indexOf(this.input);
-                            let title = ele.text.content.substring(contentIndex);
-                            if (contentIndex > 0) title = "..." + title;
-                            result.push({
-                                title: title,
-                                style: {
-                                    opacity: 1,
-                                    bgc: "rgba(255, 255, 255, 0.5)"
-                                }
-                            });
-                        }
-                    });
-                }break;
-            }
-            this.result = result;
-          }else this.result = [];
-        }
         switch(res.type) {
           case "focus": {
             if (!this.searching) this.searching = true;
-            showSearchType();
+            this.showSearchType();
           }break;
           case "input": {
-              if (!this.searching) this.searching = true;
-              this.input = res.mp.detail.value;
-              getResult(this.input, this.searchType);
+            if (!this.searching) this.searching = true;
+            this.input = res.mp.detail.value;
+            this.getResult(this.input, this.searchType);
           }break;
           case "tap": {
-              switch(this.searchType) {
-                  case "T": { this.searchType = "C"; }break;
-                  case "C": { this.searchType = "T"; }break;
-              }
-              showSearchType();
-              getResult(this.input, this.searchType);
+            switch(this.searchType) {
+                case "T": { this.searchType = "C"; }break;
+                case "C": { this.searchType = "T"; }break;
+            }
+            this.showSearchType();
+            this.getResult(this.input, this.searchType);
           }break;
         }
+      },
+      //获取并展示搜索结果
+      getResult(input, searchType) {
+        if (input === undefined || input === null) {  //容错
+            input = "";
+        }else input = input.toString();
+        if (input.length > 0) {
+        var reg = new RegExp(input.split("").map(ele => {  //若input中有元字符则转义该元字符后再编译正则表达式
+            if ("*.?+$^[](){}|\\/".split("").some(el => el === ele)) {
+                return "\\" + ele;
+            }else return ele;
+        }).join(""));
+        var result = [];
+        switch(this.searchType) {
+            case "T": {
+                this.note.map(ele => reg.test(ele.title) ? result.push(ele) : "");
+            }break;
+            case "C": {
+                temp.note.map(ele => {
+                    if (reg.test(ele.text.content)) {
+                        let contentIndex = ele.text.content.indexOf(this.input);
+                        let title = ele.text.content.substring(contentIndex);
+                        if (contentIndex > 0) title = "..." + title;
+                        result.push({
+                            title: title,
+                            style: {
+                                opacity: 1,
+                                bgc: "rgba(255, 255, 255, 0.5)"
+                            }
+                        });
+                    }
+                });
+            }break;
+        }
+        this.result = result;
+        }else this.result = [];
+      },
+      //提示正在检索的目标的类型
+      showSearchType(res) {
+        wx.showToast({
+            title: "检索记事" + (() => {
+            switch(this.searchType) {
+                case "T": { return "标题" }break;
+                case "C": { return "文本" }break;
+            }
+            })(),
+            icon: "none"
+        });
       },
       //获取所点击的搜索结果所在概览中的位置或阅览所点击的搜索结果的文本记事
       gotoResult(res) {
@@ -782,7 +785,7 @@ export default {
               });
           }
       },
-      //当前页API：复位所有除指定排除项以外未复位的删除按钮和菜单栏
+      //复位所有除指定排除项以外未复位的删除按钮和菜单栏
       hideMenu(id, type) {
           var unhiddenQueue = [];
           this.note.forEach((ele, index) => {
