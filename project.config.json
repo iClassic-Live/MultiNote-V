@@ -20,13 +20,30 @@
 			"current": -1,
 			"list": []
 		},
+		"plugin": {
+			"current": -1,
+			"list": []
+		},
 		"game": {
 			"currentL": -1,
 			"list": []
 		},
 		"miniprogram": {
 			"current": -1,
-			"list": []
+			"list": [
+				{
+					"id": -1,
+					"name": "写记事",
+					"pathName": "pages/CreateNote/main",
+					"query": ""
+				},
+				{
+					"id": -1,
+					"name": "读记事",
+					"pathName": "pages/ShowNote/main",
+					"query": ""
+				}
+			]
 		}
 	}
 }

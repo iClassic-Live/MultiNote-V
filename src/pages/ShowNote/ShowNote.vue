@@ -62,7 +62,7 @@
                 <view class="head">
                     <view class="title">
                         <text class="tag">摘要：</text>
-                        <textarea disabled="true" v-bind:value="title"></textarea>
+                        <text class="abstract" @longpress="getTitleInfo">{{ title }}</text>
                     </view>
                     <view class="exit">
                         <img v-bind:src="'/static/images/' + (sw ? sw === 'overview' ? 'null' : sw : 'null') + '.png'"
@@ -324,20 +324,20 @@
           display: flex;
           align-items: center;
         }
-        .head .title text {
-          flex: none;
+        .head .title .tag {
           height: 100%;
           width: 3em;
           padding-left: 0.5em;
           font-weight: bolder;
         }
-        .head .title textarea {
+        .head .title .abstract {
           flex: 1;
           max-height: 100%;
-          display: flex;
           line-height: 10vh;
           vertical-align: middle;
           font-weight: bolder;
+          white-space: nowrap;
+          overflow: scroll;
         }
       /* 退出按钮 */
         .head .exit {
@@ -872,6 +872,24 @@ export default {
                 if (this.result.length > 0) this.result = new Array();
             }
           });
+      },
+      //记事标题的操作
+      getTitleInfo(res) {
+        wx.setClipboardData({
+            data: this.title,
+            success: res => {
+                wx.showToast({
+                    title: "成功复制摘要！",
+                    image: "/static/images/success.png",
+                });
+            },
+            fail: res => {
+                wx.showToast({
+                    title: "无法复制摘要！",
+                    image: "/static/images/error.png"
+                });
+            }
+        });
       },
       //记事文本的操作
       getTextInfo(res) {
