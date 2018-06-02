@@ -550,34 +550,29 @@ export default {
             input = "";
         }else input = input.toString();
         if (input.length > 0) {
-        var reg = new RegExp(input.split("").map(ele => {  //若input中有元字符则转义该元字符后再编译正则表达式
-            if ("*.?+$^[](){}|\\/".split("").some(el => el === ele)) {
-                return "\\" + ele;
-            }else return ele;
-        }).join(""));
-        var result = [];
-        switch(this.searchType) {
-            case "T": {
-                this.note.map(ele => reg.test(ele.title) ? result.push(ele) : "");
-            }break;
-            case "C": {
-                temp.note.map(ele => {
-                    if (reg.test(ele.text.content)) {
-                        let contentIndex = ele.text.content.indexOf(this.input);
-                        let title = ele.text.content.substring(contentIndex);
-                        if (contentIndex > 0) title = "..." + title;
-                        result.push({
-                            title: title,
-                            style: {
-                                opacity: 1,
-                                bgc: "rgba(255, 255, 255, 0.5)"
-                            }
-                        });
-                    }
-                });
-            }break;
-        }
-        this.result = result;
+            var result = [];
+            switch(searchType) {
+                case "T": {
+                    this.note.map(ele => ele.title.includes(input) ? result.push(ele) : "");
+                }break;
+                case "C": {
+                    temp.note.map(ele => {
+                        if (ele.text.content.includes(input)) {
+                            let contentIndex = ele.text.content.indexOf(input);
+                            let title = ele.text.content.substring(contentIndex);
+                            if (contentIndex > 0) title = "..." + title;
+                            result.push({
+                                title: title,
+                                style: {
+                                    opacity: 1,
+                                    bgc: "rgba(255, 255, 255, 0.5)"
+                                }
+                            });
+                        }
+                    });
+                }break;
+            }
+            this.result = result;
         }else this.result = [];
       },
       //提示正在检索的目标的类型
@@ -630,7 +625,7 @@ export default {
 
       //列表项各子项下删除按钮和菜单栏的拉动操作
       pullOutDel_Menu(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[1];
+          var index = res.currentTarget.id.match(/\d+/g)[0];
           if (res.type === "touchstart") {
               var touch = res.clientX * SWT;
               if (touch < 112.5 || touch > 637.5) temp.anchor[1] = touch;
@@ -638,32 +633,27 @@ export default {
               if (touch > 637.5) this.hideMenu(index, "pullOutMenu");
           } else if (res.type === "touchmove" && typeof temp.anchor[1] === "number") {
               var moveDistance = Math.abs(res.clientX * SWT - temp.anchor[1]);
-              if (temp.anchor[0] > 637.5 && moveDistance <= 330) {
-                  this.note[index].style.pullOutMenu = moveDistance;
-              } else if (temp.anchor[0] < 112.5 && moveDistance <= 120) {
-                  this.note[index].style.pullOutDelete = moveDistance;
-              }
-          } else if (res.type === "touchend" && typeof temp.anchor[0] === "number") {
-              if (temp.anchor[0] > 637.5) {
-                  if (this.note[index].style.pullOutMenu > 82.5) {
-                      (function pullOutMenu () {
-                          this.note[index].style.pullOutMenu += 8.25;
-                          if (this.note[index].style.pullOutMenu < 330) {
-                              setTimeout(() => { pullOutMenu.call(this); }, 6.25);
-                          } else this.note[index].style.pullOutMenu = 330;
-                      }).call(this);
-                  } else this.hideMenu(index, "pullOutDelete");
-              } else if (temp.anchor[0] < 112.5) {
-                  if (this.note[index].style.pullOutDelete > 60) {
-                      (function pullOutDelete () {
-                          this.note[index].style.pullOutDelete += 3;
-                          if (this.note[index].style.pullOutDelete < 120) {
-                              setTimeout(() => { pullOutDelete.call(this); }, 6.25);
-                          } else this.note[index].style.pullOutDelete = 120;
-                      }).call(this);
-                  } else this.hideMenu(index, "pullOutMenu");
-              }
-              delete temp.anchor[0];
+              if (temp.anchor[1] > 637.5 && moveDistance <= 330) {
+                  var target = "Menu";
+              } else if (temp.anchor[1] < 112.5 && moveDistance <= 120) {
+                  var target = "Delete";
+              } else return;
+              this.note[index].style["pullOut" + target] = moveDistance;
+          } else if (res.type === "touchend" && typeof temp.anchor[1] === "number") {
+            if (temp.anchor[1] > 637.5) {
+                var args = { target: "Menu", hide: "Delete", start: 82.5, step: 8.25, end: 330 };
+            } else if (temp.anchor[1] < 112.5) {
+                var args = { target: "Delete", hide: "Menu", start: 60, step: 3, end: 120 };
+            } else return delete temp.anchor[1];
+            if (this.note[index].style["pullOut" + args["target"]] > args["start"]) {
+                (function pullOut () {
+                    this.note[index].style["pullOut" + args["target"]] += args["step"];
+                    if (this.note[index].style["pullOut" + args["target"]] < args["end"]) {
+                        setTimeout(() => pullOut.call(this), 6.25);
+                    } else this.note[index].style["pullOut" + args["target"]] = args["end"];
+                }).call(this);
+            } else this.hideMenu(index, "pullOut" + args["hide"]);
+            delete temp.anchor[1];
           }
       },
       //列表项各子项下记事的修改操作

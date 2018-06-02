@@ -78,7 +78,8 @@
                         <view class="recording ele">
                             <view class="rec_component" v-bind:animation="rotating">
                                 <view class="rec_pointer"></view>
-                                <button disabled="true" v-bind:animation="breathing" @touchstart="startRecord" @touchend="stopRecord"></button>
+                                <button disabled="true" v-bind:animation="breathing"
+                                 @touchstart="startRecord" @touchend="stopRecord"></button>
                             </view>
                         </view>
 
@@ -531,7 +532,6 @@ export default {
 
         ifReady: false,
 
-        duration: 0,
         current: wx.getStorageSync("bgiCurrent"),
         bgiQueue: wx.getStorageSync("bgiQueue"),
         autoplay: false,
@@ -571,7 +571,6 @@ export default {
 
       }
     },
-
 
     /* 原生生命周期函数--监听页面加载 */
     onLoad(res) {
@@ -674,7 +673,7 @@ export default {
             if (this.img.length > 0) this.img = [];
             if (this.video !== "") this.video = "";
         }
-
+        
         if (this.flash !== "off") this.flash = "off";
         if (this.camSet !== "back") this.camSet = "back";
         if (this.breathing !== null) this.breathing = null;
@@ -694,12 +693,15 @@ export default {
                 recorderManager.onStop();
             } else { //当录音正常进行时录音
                 temp.recordNow = true;
+                if (temp.ifShowToast) {
+                    wx.hideToast();
+                    temp.ifShowToast = false;
+                }
                 this.breathingEffection("start");
                 this.progressbar("start");
                 //注册录音结束事件
                 recorderManager.onStop(res => {
                     temp.recordNow = false;
-                    wx.hideToast();
                     this.breathingEffection("stop");
                     this.progressbar("stop");
                     if (res.duration >= 120000) {
@@ -717,7 +719,11 @@ export default {
                         });
                         wx.showToast({
                             title: "第" + this.playback.length + "条语音记事",
-                            icon: "none"
+                            icon: "none",
+                            success(res) {
+                                temp.ifShowToast = true;
+                                setTimeout(() => temp.ifShowToast = false, 1450);
+                            }
                         });
                         wx.vibrateShort();
                     } else {
@@ -730,6 +736,15 @@ export default {
                 });
             }
         });
+
+        //预热录音记事录音按钮的启停动画效果
+        this.breathingEffection("start");
+        this.progressbar("start");
+        this.$nextTick(() => {
+            this.breathingEffection("stop");
+            this.progressbar("stop");
+        });
+
     },
 
     /* 原生生命周期函数--监听页面初次渲染完成 */
@@ -742,7 +757,9 @@ export default {
     onHide: res => console.log("CreateNote onHide"),
 
     /* 原生生命周期函数--监听页面卸载 */
-    onUnload: res => this.a.data.ifReady = false,
+    onUnload(res) {
+        this.ifReady = false;
+    },
 
 
     computed: {
@@ -1076,32 +1093,33 @@ export default {
         },
         //呼吸效果的启停
         breathingEffection(tag) {
-            var breathing = wx.createAnimation();
             if (tag === "start") {
-                breathing.backgroundColor("#FF0000").step({ duration: 1000 });
+                var breathing = wx.createAnimation({ duration: 120000 });
+                for (let i = 0; i < 120; i++) {
+                    breathing.backgroundColor("#FF0000").step({ duration: 1000 })
+                             .backgroundColor("#F5F5DC").step({ duration: 1000 });
+                }
                 this.breathing = breathing.export();
-                temp.timerA = setTimeout(() => {
-                    breathing.backgroundColor("#F5F5DC").step({ duration: 1000 });
-                    this.breathing = breathing.export();
-                }, 1000);
-                temp.timerB = setTimeout(() => this.breathingEffection("start"), 2000);
             } else if (tag === "stop") {
-                clearTimeout(temp.timerA);
-                clearTimeout(temp.timerB);
-                breathing.backgroundColor("#F5F5DC").step({ duration: 0 });
-                this.breathing = breathing.export();
+                this.reRender = true;
+                this.$nextTick(() => {
+                    this.reRender = false;
+                    this.breathing = wx.createAnimation({ duration: 0 })
+                                       .backgroundColor("#F5F5DC").step({ duration: 0 })
+                                       .export();
+                });
             }
         },
         //进度指示的启停
         progressbar(tag) {
-            if("rotating" in temp === false) temp.rotating = wx.createAnimation();
-            if (tag === "start") {
-                temp.rotating.rotate(360).step({ duration: 120000 });
-                this.rotating = temp.rotating.export();
-            }else if (tag === "stop") {
-                temp.rotating.rotate(0).step({ duration: 1000 });
-                this.rotating = temp.rotating.export();
+            switch(tag) {
+                case "start": { var val = [120000, 360]; }break;
+                case "stop":{  var val = [1000, 0]; }break;
+                default: return;
             }
+            this.rotating = wx.createAnimation({ duration: val[0] })
+                              .rotate(val[1]).step({ duration: val[0] })
+                              .export();
         },
 
         /* 图片记事 */
