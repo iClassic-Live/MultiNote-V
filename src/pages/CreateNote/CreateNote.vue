@@ -2,7 +2,9 @@
     <view id="page" v-bind:style="{display:ifReady ? 'block' : 'none'}">
 
         <scroll-view id="background">
-            <swiper v-bind:current="current" circular="true" v-bind:autoplay="autoplay" interval="0" v-bind:duration="duration">
+            <swiper v-bind:current="current" circular=true interval=30
+             v-bind:autoplay="autoplay" @change="changeBackgroundImage"
+             @animationfinish="changeBackgroundImage">
                 <swiper-item v-for="item in bgiQueue" :key="item">
                     <img mode="aspectFill" v-bind:src="item"/>
                 </swiper-item>
@@ -41,8 +43,7 @@
                 <view class="bgiChange">
                     <view class="bgiChange_cp">
                         <img src="/static/images/bgiChange.png" v-bind:style="{left: 50 * bgiChange + '%'}" 
-                        @touchstart="changeBackgroundImage" 
-                        @touchmove="changeBackgroundImage"
+                        @touchstart="changeBackgroundImage" @touchmove="changeBackgroundImage"
                         @touchend="changeBackgroundImage">
                     </view>
                 </view>
@@ -679,7 +680,11 @@ export default {
         if (this.breathing !== null) this.breathing = null;
         if (this.rotating !== null) this.rotating = null;
 
-        temp = {};
+        temp = {  //初始化临时数据存储器
+
+            bgiChangeComplete: true
+
+        };
 
         //预注册录音开始事件
         recorderManager.onStart(res => {
@@ -727,21 +732,9 @@ export default {
         });
     },
 
-    /* 原生生命周期函数--监听页面显示 */
-    onShow(res) {
-        console.log("CreateNote onShow");
-        if (!this.ifReady) {
-            var bgiCurrent = wx.getStorageSync("bgiCurrent");
-            if (this.current === bgiCurrent) {
-                if (this.duration !== 500) this.duration = 500;
-            } else this.current = bgiCurrent;   
-        }
-    },
-
     /* 原生生命周期函数--监听页面初次渲染完成 */
     onReady(res) {
         console.log("CreateNote onReady");
-        if (this.duration !== 500) this.duration = 500;
         this.ifReady = true;
     },
 
@@ -1321,24 +1314,19 @@ export default {
         changeBackgroundImage(res) {
             if (res.type === "touchstart") {
                 temp.anchor = res.clientX;
-            }else if (res.type === "touchmove") {
+            }else if (res.type === "touchmove" && temp.bgiChangeComplete) {
                 var moveDistance = res.clientX - temp.anchor;
-                if (Math.abs(moveDistance) < 37.5) {
-                    this.bgiChange = moveDistance / 37.5;
-                }else {
+                if (Math.abs(moveDistance) >= 37.5) {
                     if (moveDistance > 0) {
                         this.bgiChange = 1;
                     }else this.bgiChange = -1;
-                }
+                }else this.bgiChange = moveDistance / 37.5;
             }else if (res.type === "touchend") {
+                if (Math.abs(this.bgiChange) === 1) temp.bgiChangeComplete = false;
                 switch(this.bgiChange) {
                     case 1: {
                         if (this.current >= this.bgiQueue.length - 1) {
                             this.autoplay = true;
-                            setTimeout(() => {
-                                this.current = 0;
-                                this.autoplay = false;
-                            });                      
                         }else this.current += 1;
                     }break;
                     case -1: {
@@ -1347,11 +1335,14 @@ export default {
                         }else this.current -= 1;
                     }break;
                 }
-                if (this.bgiChange !== 0) {
-                    this.bgiChange = 0;
-                    wx.setStorageSync("bgiCurrent", this.current);
+                if (this.bgiChange !== 0) this.bgiChange = 0;
+            }else if (res.type === "change") {
+                if (this.autoplay) {
+                    this.current = 0;
+                    this.autoplay = false;
                 }
-            }
+                wx.setStorageSync("bgiCurrent", res.mp.detail.current);
+            }else if (res.type === "animationfinish") temp.bgiChangeComplete = true;
         },
 
         /* 当前记事的保存与取消 */

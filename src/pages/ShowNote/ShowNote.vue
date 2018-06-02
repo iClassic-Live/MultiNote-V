@@ -2,7 +2,9 @@
     <view id="page" v-bind:style="{display:ifReady ? 'block' : 'none'}">
         
         <scroll-view id="background">
-            <swiper v-bind:current="current" circular="true" v-bind:autoplay="autoplay" interval="0" v-bind:duration="duration">
+            <swiper v-bind:current="current" circular=true interval=30
+             v-bind:autoplay="autoplay" @change="changeBackgroundImage"
+             @animationfinish="changeBackgroundImage">
                 <swiper-item v-for="item in bgiQueue" :key="item">
                     <img mode="aspectFill" v-bind:src="item"/>
                 </swiper-item>
@@ -418,10 +420,10 @@ export default {
 
             ifReady: false,
 
-            duration: 0,
+            autoplay: false,
+            interval: 15,
             current: wx.getStorageSync("bgiCurrent"),
             bgiQueue: wx.getStorageSync("bgiQueue"),
-            autoplay: false,
             bgiChange: 0,
 
             sw: "overview",
@@ -474,6 +476,8 @@ export default {
 
         temp = {  //初始化临时数据存储器
 
+          bgiChangeComplete: true,
+
           anchor: [null, null, null], //相应滑动操作的起始标识
 
           note: storage.map(ele => { //所有记事的内容
@@ -484,21 +488,9 @@ export default {
         }
     },
 
-    /* 原生生命周期函数--监听页面显示 */
-    onShow(res) {
-        console.log("ShowNote onShow");
-        if (!this.ifReady) {
-            var bgiCurrent = wx.getStorageSync("bgiCurrent");
-            if (this.current === bgiCurrent) {
-                if (this.duration !== 500) this.duration = 500;
-            } else this.current = bgiCurrent;   
-        }
-    },
-
     /* 原生生命周期函数--监听页面初次渲染完成 */
     onReady(res) {
       console.log("ShowNote onReady");
-      if (this.duration !== 500) this.duration = 500;
       this.ifReady = true;
     },
 
@@ -506,7 +498,9 @@ export default {
     onHide: res => console.log("ShowNote onHide"),
 
     /* 原生生命周期函数--监听页面卸载 */
-    onUnload: res => this.a.data.ifReady = false,
+    onUnload(res) {
+        this.ifReady = false;
+    },
 
 
     methods: {
@@ -636,14 +630,14 @@ export default {
 
       //列表项各子项下删除按钮和菜单栏的拉动操作
       pullOutDel_Menu(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
+          var index = res.currentTarget.id.match(/\d+/g)[1];
           if (res.type === "touchstart") {
               var touch = res.clientX * SWT;
-              if (touch < 112.5 || touch > 637.5) temp.anchor[0] = touch;
+              if (touch < 112.5 || touch > 637.5) temp.anchor[1] = touch;
               if (touch < 112.5) this.hideMenu(index, "pullOutDelete");
               if (touch > 637.5) this.hideMenu(index, "pullOutMenu");
-          } else if (res.type === "touchmove" && typeof temp.anchor[0] === "number") {
-              var moveDistance = Math.abs(res.clientX * SWT - temp.anchor[0]);
+          } else if (res.type === "touchmove" && typeof temp.anchor[1] === "number") {
+              var moveDistance = Math.abs(res.clientX * SWT - temp.anchor[1]);
               if (temp.anchor[0] > 637.5 && moveDistance <= 330) {
                   this.note[index].style.pullOutMenu = moveDistance;
               } else if (temp.anchor[0] < 112.5 && moveDistance <= 120) {
@@ -813,39 +807,37 @@ export default {
 
       //背景图的切换
       changeBackgroundImage(res) {
-          if (res.type === "touchstart") {
-              temp.anchor[0] = res.mp.changedTouches[0].pageX;
-          } else if (res.type === "touchmove") {
-              var moveDistance = (res.mp.changedTouches[0].pageX - temp.anchor[0]) * SWT;
-              if (Math.abs(moveDistance) > 37.5) {
-                  if (moveDistance > 0) {
-                      this.bgiChange = 1;
-                  } else this.bgiChange = -1;
-              } else this.bgiChange = moveDistance / 37.5;
-          } else if (res.type === "touchend") {
-              switch (this.bgiChange) {
-                  case 1: {
-                      if (this.current < this.bgiQueue.length - 1) {
-                          this.current += 1;
-                      } else {
-                          this.autoplay = true;
-                          this.autoplay = false;
-                          this.current = 0;
-                      }
-                      break;
-                  }
-                  case -1: {
-                      if (this.current > 0) {
-                          this.current -= 1;
-                      } else this.current = this.bgiQueue.length - 1;
-                      break;
-                  }
-              }
-              if (this.bgiChange !== 0) {
-                  this.bgiChange = 0;
-                  wx.setStorageSync("bgiCurrent", this.current);
-              }
-          }
+        if (res.type === "touchstart") {
+            temp.anchor[0] = res.clientX;
+        }else if (res.type === "touchmove" && temp.bgiChangeComplete) {
+            var moveDistance = res.clientX - temp.anchor[0];
+            if (Math.abs(moveDistance) >= 37.5) {
+                if (moveDistance > 0) {
+                    this.bgiChange = 1;
+                }else this.bgiChange = -1;
+            }else this.bgiChange = moveDistance / 37.5;
+        }else if (res.type === "touchend") {
+            if (Math.abs(this.bgiChange) === 1) temp.bgiChangeComplete = false;
+            switch(this.bgiChange) {
+                case 1: {
+                    if (this.current >= this.bgiQueue.length - 1) {
+                        this.autoplay = true;
+                    }else this.current += 1;
+                }break;
+                case -1: {
+                    if (this.current <= 0) {
+                        this.current = this.bgiQueue.length - 1;
+                    }else this.current -= 1;
+                }break;
+            }
+            if (this.bgiChange !== 0) this.bgiChange = 0;
+        }else if (res.type === "change") {
+            if (this.autoplay) {
+                this.current = 0;
+                this.autoplay = false;
+            }
+            wx.setStorageSync("bgiCurrent", res.mp.detail.current);
+        }else if (res.type === "animationfinish") temp.bgiChangeComplete = true;
       },
 
       //记事的新建
