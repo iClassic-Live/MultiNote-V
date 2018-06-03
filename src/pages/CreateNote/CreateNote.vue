@@ -1075,19 +1075,21 @@ export default {
             title: "语音记事",
             content: "是否删除本条语音？",
                 success: res => {
-                    wx.showLoading({
-                        title: "正在删除本语音",
-                        mask: true
-                    });
-                    (function deleteRecord () {
-                        this.playback[index].opacity -= 0.1;
-                        setTimeout(() => {
-                            wx.hideLoading();
-                            if (this.playback[index].opacity <= 0) {
-                                this.playback.splice(index, 1);
-                            }else deleteRecord.call(this);
-                        }, 50);
-                    }).call(this);
+                    if (res.confirm) {
+                        wx.showLoading({
+                            title: "正在删除本语音",
+                            mask: true
+                        });
+                        (function deleteRecord () {
+                            this.playback[index].opacity -= 0.1;
+                            setTimeout(() => {
+                                wx.hideLoading();
+                                if (this.playback[index].opacity <= 0) {
+                                    this.playback.splice(index, 1);
+                                }else deleteRecord.call(this);
+                            }, 50);
+                        }).call(this);
+                    }
                 }
             });
         },
