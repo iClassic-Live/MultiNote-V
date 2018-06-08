@@ -2,9 +2,8 @@
     <view id="page" v-bind:style="{display:ifReady ? 'block' : 'none'}">
         
         <scroll-view id="background">
-            <swiper v-bind:current="current" circular=true interval=30
-             v-bind:autoplay="autoplay" @change="changeBackgroundImage"
-             @animationfinish="changeBackgroundImage">
+            <swiper v-bind:current="current" v-bind:duration="duration"
+             circular=true @change="changeBackgroundImage">
                 <swiper-item v-for="item in bgiQueue" :key="item">
                     <img mode="aspectFill" v-bind:src="item"/>
                 </swiper-item>
@@ -26,21 +25,19 @@
                   </view>
                 </view>
 
-                <scroll-view class="list" scroll-y="true" v-bind:scroll-into-view="target"
-                  @tap="tapFn_on_overview">
-                    <view class="item" v-bind:id="'n' + index" v-for="(item, index) in (searching ? result : note)" :key="index"
-                        v-bind:style="{opacity:item.style.opacity}" @touchstart="pullOutDel_Menu" @touchmove="pullOutDel_Menu" @touchend="pullOutDel_Menu"
-                        @tap.stop="tapFn_on_item">
+                <scroll-view class="list" scroll-y=true v-bind:scroll-into-view="target"
+                 @tap="tapFn_on_overview" @scroll="hideMenu">
+                    <view class="item" v-bind:id="'n' + item.id" v-for="item in (searching ? result : note)" :key="item.id"
+                        v-bind:style="{opacity:item.style.opacity}" @touchstart="pullOutDel_Menu"
+                        @touchmove="pullOutDel_Menu" @touchend="pullOutDel_Menu" @tap.stop="tapFn_on_item">
                         <view class="title" v-bind:style="{'background-color': item.style.bgc}">
                             <text v-bind:style="{color:item.style.fontColor}">{{ item.title }}</text>
                         </view>
-                        <view class="del" v-if="!searching" v-bind:id="'del_' + index"
-                        v-bind:style="{left: -(120 - item.style.pullOutDelete) + 'rpx'}" @tap.stop="deleteNote">删除</view>
+                        <view class="del" v-if="!searching" v-bind:id="'n' + item.id" @tap.stop="deleteNote"
+                        v-bind:style="{left: -(120 - item.style.pullOutDelete) + 'rpx'}">删除</view>
                         <view class="menu" v-if="!searching" v-bind:style="{right: -(330 - item.style.pullOutMenu) + 'rpx'}">
-                            <img v-bind:id="'text_' + index" mode="aspectFit" src="/static/images/text.png" @tap.stop="getContent">
-                            <img v-bind:id="'record_'+ index" mode="aspectFit" src="/static/images/record.png" @tap.stop="getContent">
-                            <img v-bind:id="'image_' + index" mode="aspectFit" src="/static/images/image.png" @tap.stop="getContent">
-                            <img v-bind:id="'video_' + index" mode="aspectFit" src="/static/images/video.png" @tap.stop="getContent">
+                            <img v-bind:id="ele + '_' + item.id" v-for="(ele, id) in ['text', 'record', 'image', 'video']"
+                             :key="id" mode="aspectFit" v-bind:src="'/static/images/' + ele + '.png'" @tap.stop="getContent">
                         </view>
                     </view>
                 </scroll-view>
@@ -49,8 +46,8 @@
                     <view class="bgiChange" v-bind:style="{display: searching ? 'none' : 'block'}">
                         <view class="bgiChange_cp">
                         <img src="/static/images/bgiChange.png" v-bind:style="{left: 50 * bgiChange + '%'}" 
-                            @touchstart="changeBackgroundImage" @touchmove="changeBackgroundImage"
-                            @touchend="changeBackgroundImage">
+                         @touchstart="changeBackgroundImage" @touchmove="changeBackgroundImage"
+                         @touchend="changeBackgroundImage">
                         </view>
                     </view>
                     <view class="new" v-bind:style="{display: searching ? 'none' : 'block'}">
@@ -76,13 +73,13 @@
 
                   <view class="text" 
                       v-bind:style="{display:sw === 'text' ? 'block' : 'none'}">
-                      <textarea v-model="text.content" disabled="true" @longpress="getTextInfo"
+                      <textarea v-bind:value="text.content !== undefined ? text.content : ''" disabled="true" @longpress="getTextInfo"
                       v-bind:style="{color: text.fontColor, 'font-weight':text.fontWeight, 'font-size':text.fontSize}">
                       </textarea>
                   </view>
                   
                   <view class="record"
-                      v-bind:style="{display:sw === 'record' ? '' : 'none'}" @tap.stop="getRecordInfo">
+                      v-bind:style="{display:sw === 'record' ? 'flex' : 'none'}" @tap.stop="getRecordInfo">
                       <button v-bind:id="'record-item_' + index" v-for="(item, index) in playback" 
                       :key="index" v-bind:style="{opacity:item.opacity}" @tap.stop="getRecordInfo">
                       {{index + 1}}
@@ -120,7 +117,7 @@
 
 
 
-  /* 背景 */
+/* 背景 */
   #background {
     position: absolute; 
     height: 100%;
@@ -408,9 +405,13 @@
 
 const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的相对像素比
 
-const innerAudioContext = wx.createInnerAudioContext();  //创建并返回内部 audio 上下文
+const innerAudioContext = wx.createInnerAudioContext();  //创建并返回内部 audio 上下文 innerAudioContext 对象
 
-var temp;  //临时数据存储器
+var temp = {
+
+    bgiQueue: wx.getStorageSync("bgiQueue")
+
+}
 
 export default {
 
@@ -420,8 +421,7 @@ export default {
 
             ifReady: false,
 
-            autoplay: false,
-            interval: 15,
+            duration: 0,
             current: wx.getStorageSync("bgiCurrent"),
             bgiQueue: wx.getStorageSync("bgiQueue"),
             bgiChange: 0,
@@ -450,21 +450,38 @@ export default {
         }
     },
 
-
-    /* 原生生命周期函数--监听页面加载 */
+    /* 原生生命周期钩子--监听页加挂载 */
     onLoad(res) {
         console.log("ShowNote onLoad");
-        wx.hideLoading();
+        
+
+        temp = {  //初始化临时数据存储器
+
+          bgiQueue: temp.bgiQueue,
+
+          anchor: [,,,], //相应滑动操作的起始标识
+
+          note: wx.getStorageSync("note").map((ele, index) => {
+              ele["id"] = index;
+              delete ele["title"];
+              ele.text.content = ele.text.content.toString();
+              return ele;
+          })
+
+        };
+
+        if (this.bgiQueue.length > temp.bgiQueue.length) this.bgiQueue = temp.bgiQueue;
         var bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
+        this.duration = 500;
 
         this.searchType = "T";
         this.target = "";
 
-        var storage = wx.getStorageSync("note");
-        this.note = storage.map(ele => {
+        this.note = wx.getStorageSync("note").map((ele, index) => {
             return {
-                title: ele.title,
+                id: index,
+                title: ele.title.content,
                 style: {
                     opacity: 1,
                     pullOutDelete: 0,
@@ -474,51 +491,30 @@ export default {
             }
         });
 
-        temp = {  //初始化临时数据存储器
+        this.$nextTick(() => this.ifReady = true); //在页面初次渲染完成后再展示视图
 
-          bgiChangeComplete: true,
-
-          anchor: [null, null, null], //相应滑动操作的起始标识
-
-          note: storage.map(ele => { //所有记事的内容
-                delete ele.title;
-                return ele;
-          })
-
-        }
     },
 
-    /* 原生生命周期函数--监听页面初次渲染完成 */
-    onReady(res) {
-      console.log("ShowNote onReady");
-      this.ifReady = true;
-    },
-
-    /* 原生生命周期函数--监听页面隐藏 */
-    onHide: res => console.log("ShowNote onHide"),
-
-    /* 原生生命周期函数--监听页面卸载 */
+    /* 原生生命周期钩子--监听页面卸载 */
     onUnload(res) {
+        console.log("ShowNote onUnload");
         this.ifReady = false;
+        this.duration = 0;
     },
-
 
     methods: {
 
       //概览区白区的点击操作
       tapFn_on_overview(res) {
-        if (this.searching) {
-          this.backToOverview();
-        }else this.hideMenu();
+        this.searching ? this.backToOverview() : this.hideMenu();
       },
       //列表项的点击操作
       tapFn_on_item(res) {
         if (!this.searching) {
           var index = res.currentTarget.id.match(/\d+/g)[0];
           var style = this.note[index].style;
-          if (style.pullOutDelete !== 0 || style.pullOutMenu !== 0) { //取消菜单栏/删除按钮的拉出
-            this.hideMenu();
-          }else this.editNote(res);
+          //取消菜单栏/删除按钮的拉出
+          style.pullOutDelete !== 0 || style.pullOutMenu !== 0 ? this.hideMenu() : this.editNote(res);
         }else this.gotoResult(res);
       },
 
@@ -526,6 +522,7 @@ export default {
       search(res) {
         switch(res.type) {
           case "focus": {
+            this.hideMenu();
             if (!this.searching) this.searching = true;
             this.showSearchType();
           }break;
@@ -562,6 +559,7 @@ export default {
                             let title = ele.text.content.substring(contentIndex);
                             if (contentIndex > 0) title = "..." + title;
                             result.push({
+                                id: ele.id,
                                 title: title,
                                 style: {
                                     opacity: 1,
@@ -578,12 +576,7 @@ export default {
       //提示正在检索的目标的类型
       showSearchType(res) {
         wx.showToast({
-            title: "检索记事" + (() => {
-            switch(this.searchType) {
-                case "T": { return "标题" }break;
-                case "C": { return "文本" }break;
-            }
-            })(),
+            title: "检索记事" + (this.searchType === "T" ? "摘要" : "文本"),
             icon: "none"
         });
       },
@@ -596,20 +589,14 @@ export default {
         this.target = res.currentTarget.id;
         switch(this.searchType) {
           case "T": {
-            (function show() {
-              if (!temp.hasOwnProperty("times")) temp.times = 0;
-              if (temp.times % 2 === 0) {
-                this.note[index].style.bgc = "#f00";
-                this.note[index].style.fontColor = "#fff";
-              } else {
-                this.note[index].style.bgc = "rgba(255, 255, 255, 0.5)";
-                this.note[index].style.fontColor = "#000";
-              }
-              if (temp.times !== 3) {
-                ++temp.times;
-                setTimeout(() => show.call(this), 250);
-              } else delete temp.times;
-            }).call(this);
+            this.$nextTick(() => {
+                (function show(times = 0) {
+                ++times;
+                this.note[index].style.bgc = times % 2 > 0 ? "#f00" : "rgba(255, 255, 255, 0.5)";
+                this.note[index].style.fontColor = times % 2 > 0 ? "#fff" : "#000";
+                if (times < 4) setTimeout(() => show.call(this, times), 250);
+                }).call(this);
+            });
           }break;
           case "C": {
             this.sw = "text";
@@ -631,6 +618,7 @@ export default {
               if (touch < 112.5 || touch > 637.5) temp.anchor[1] = touch;
               if (touch < 112.5) this.hideMenu(index, "pullOutDelete");
               if (touch > 637.5) this.hideMenu(index, "pullOutMenu");
+              if (temp.hiding) delete temp.hiding;
           } else if (res.type === "touchmove" && typeof temp.anchor[1] === "number") {
               var moveDistance = Math.abs(res.clientX * SWT - temp.anchor[1]);
               if (temp.anchor[1] > 637.5 && moveDistance <= 330) {
@@ -645,14 +633,14 @@ export default {
             } else if (temp.anchor[1] < 112.5) {
                 var args = { target: "Delete", hide: "Menu", start: 60, step: 3, end: 120 };
             } else return delete temp.anchor[1];
-            if (this.note[index].style["pullOut" + args["target"]] > args["start"]) {
+            if (this.note[index].style[`pullOut${args["target"]}`] > args["start"]) {
                 (function pullOut () {
-                    this.note[index].style["pullOut" + args["target"]] += args["step"];
-                    if (this.note[index].style["pullOut" + args["target"]] < args["end"]) {
+                    this.note[index].style[`pullOut${args["target"]}`] += args["step"];
+                    if (this.note[index].style[`pullOut${args["target"]}`] < args["end"]) {
                         setTimeout(() => pullOut.call(this), 6.25);
-                    } else this.note[index].style["pullOut" + args["target"]] = args["end"];
+                    } else this.note[index].style[`pullOut${args["target"]}`] = args["end"];
                 }).call(this);
-            } else this.hideMenu(index, "pullOut" + args["hide"]);
+            } else this.hideMenu(index, `pullOut${args["hide"]}`);
             delete temp.anchor[1];
           }
       },
@@ -695,7 +683,9 @@ export default {
                     var restToDelete = note.record.length + note.image.length + 1;
                     var rewriteData = () => {
                         this.note.splice(index, 1);
+                        this.note.forEach((ele, id) => ele.id !== id ? ele.id = id : true);
                         temp.note.splice(index, 1);
+                        temp.note.forEach((ele, id) => ele.id !== id ? ele.id = id : true);
                         var storage = wx.getStorageSync("note");
                         storage.splice(index, 1);
                         wx.setStorageSync("note", storage);
@@ -726,8 +716,8 @@ export default {
                             setTimeout(() => deleting.call(this), 25);
                         }else if (restToDelete === 0) rewriteData();
                     }).call(this);
-                    note.record.forEach(ele => removeSavedFile(ele.path));
-                    note.image.forEach(ele => removeSavedFile(ele.path));
+                    note.record.map(ele => removeSavedFile(ele.path));
+                    note.image.map(ele => removeSavedFile(ele.path));
                     removeSavedFile(note.video);
                 } else {
                     this.note[index].style.bgc = "rgba(255, 255, 255, 0.5)";
@@ -764,13 +754,14 @@ export default {
                   case "video": var content = "视频记事"; break;
               }
               wx.showToast({
-                  title: "该项无" + content,
+                  title: `该项无${content}`,
                   image: "/static/images/warning.png"
               });
           }
       },
       //复位所有除指定排除项以外未复位的删除按钮和菜单栏
       hideMenu(id, type) {
+          if (temp.hiding) return;
           var unhiddenQueue = [];
           this.note.forEach((ele, index) => {
               if (ele.style.pullOutDelete > 0) unhiddenQueue.push({ type: "pullOutDelete", index: index });
@@ -778,6 +769,7 @@ export default {
           });
           const args = arguments;
           var restToHide = unhiddenQueue.length;
+          if (restToHide > 0) temp.hiding = true;
           unhiddenQueue.forEach((ele, index) => {
               if (ele.type !== type || ele.index !== parseInt(id)) {
                   (function hiding (target, step) {
@@ -787,7 +779,11 @@ export default {
                     } else {
                         restToHide -= 1;
                         this.note[ele.index].style[target] = 0;
-                        if (restToHide === 0) for (let arg of args) if (typeof arg === "function") arg();
+                        delete temp.hiding;
+                        if (restToHide === 0) {
+                            delete temp.hiding;
+                            for (let arg of args) if (typeof arg === "function") arg();
+                        }
                     }
                   }).apply(this, [ele.type, /Menu/.test(ele.type) ? 8.25 : 3])
               }
@@ -797,41 +793,50 @@ export default {
 
       //背景图的切换
       changeBackgroundImage(res) {
-        if (res.type === "touchstart") {
-            temp.anchor[0] = res.clientX;
-        }else if (res.type === "touchmove" && temp.bgiChangeComplete) {
-            var moveDistance = res.clientX - temp.anchor[0];
-            if (Math.abs(moveDistance) >= 37.5) {
-                if (moveDistance > 0) {
-                    this.bgiChange = 1;
-                }else this.bgiChange = -1;
-            }else this.bgiChange = moveDistance / 37.5;
-        }else if (res.type === "touchend") {
-            if (Math.abs(this.bgiChange) === 1) temp.bgiChangeComplete = false;
-            switch(this.bgiChange) {
-                case 1: {
-                    if (this.current >= this.bgiQueue.length - 1) {
-                        this.autoplay = true;
-                    }else this.current += 1;
-                }break;
-                case -1: {
-                    if (this.current <= 0) {
-                        this.current = this.bgiQueue.length - 1;
-                    }else this.current -= 1;
-                }break;
-            }
-            if (this.bgiChange !== 0) this.bgiChange = 0;
-        }else if (res.type === "change") {
-            if (this.autoplay) {
-                this.current = 0;
-                this.autoplay = false;
-            }
-            wx.setStorageSync("bgiCurrent", res.mp.detail.current);
-        }else if (res.type === "animationfinish") temp.bgiChangeComplete = true;
+        switch(res.type) {
+            case "touchstart": { temp.anchor[0] = res.clientX; }break;
+            case "touchmove": {
+                var moveDistance = (res.clientX - temp.anchor[0]) * SWT;
+                if (Math.abs(moveDistance) >= 37.5) {
+                    if (moveDistance > 0) {
+                        this.bgiChange = 1;
+                    }else this.bgiChange = -1;
+                }else this.bgiChange = moveDistance / 37.5;                    
+            }break;
+            case "touchend": {
+                switch(this.bgiChange) {
+                    case 1: {
+                        if (this.current >= this.bgiQueue.length - 1) {
+                            this.bgiQueue.push(...temp.bgiQueue);
+                            this.$nextTick(() => this.current += 1);
+                        }else this.current += 1;
+                    }break;
+                    case -1: {
+                        if (this.current <= 0) {
+                            if (this.bgiQueue.length > temp.bgiQueue.length) {
+                                this.bgiQueue = temp.bgiQueue;
+                                this.$nextTick(() => this.current = this.bgiQueue.length - 1);
+                            }else this.current = this.bgiQueue.length - 1;
+                        }else this.current -= 1;
+                    }break;
+                }
+                if (this.bgiChange !== 0) this.bgiChange = 0;
+            }break;
+            case "change": { wx.setStorageSync("bgiCurrent", this.current % temp.bgiQueue.length); }break;
+        }
       },
 
       //记事的新建
-      createNote: res => wx.redirectTo({ url: "../CreateNote/main" }),
+      createNote(res) {
+          if (this.note.length < 30) {
+              wx.redirectTo({ url: "../CreateNote/main" });
+          }else wx.showModal({
+              title: "读记事",
+              content: "警告：当前记事条数已达上限！",
+              showCancel: false,
+              comfirmText: "了解"
+          });
+      },
 
       //返回概览区
       backToOverview(res) {
@@ -954,7 +959,7 @@ export default {
                                 fail: res => {
                                     wx.showToast({
                                         title: "保存图片失败！",
-                                        image: "/static/images/error.png"
+                                        image: "/static/images/warning.png"
                                     });
                                 }
                             });
@@ -966,7 +971,8 @@ export default {
                 wx.showModal({
                     title: "读记事",
                     content: "警告：没有保存到相册的权限，无法保存图片到本地！",
-                    showCancel: false
+                    showCancel: false,
+                    comfirmText: "了解"
                 });
             }
             wx.getSetting({
@@ -977,11 +983,7 @@ export default {
                             success: res => saveImage(),
                             fail:res => {
                                 wx.openSetting({
-                                    success: res => {
-                                        if (res.authSetting["scope.writePhotosAlbum"]) {
-                                            saveImage();
-                                        } else failure();
-                                    },
+                                    success: res => res.authSetting["scope.writePhotosAlbum"] ? saveImage() : failure(),
                                     fail: res => failure()
                                 });
                             }
@@ -992,7 +994,8 @@ export default {
                     wx.showModal({
                         title: "读记事",
                         content: "警告：无法读取权限获取信息！",
-                        showCancel: false
+                        showCancel: false,
+                        comfirmText: "了解"
                     });
                 }
             });
@@ -1017,7 +1020,7 @@ export default {
                               fail: res => {
                                   wx.showToast({
                                       title: "保存视频失败！",
-                                      image: "/static/images/error.png"
+                                      image: "/static/images/warning.png"
                                   });
                               }
                           });
@@ -1029,7 +1032,8 @@ export default {
               wx.showModal({
                   title: "读记事",
                   content: "警告：没有保存到相册的权限，无法保存视频到本地！",
-                  showCancel: false
+                  showCancel: false,
+                  comfirmText: "了解"
               });
           }
           wx.getSetting({
@@ -1040,11 +1044,7 @@ export default {
                           success: res => saveVideo(),
                           fail: res => {
                               wx.openSetting({
-                                  success: res => {
-                                      if (res.authSetting['scope.writePhotosAlbum']) {
-                                          saveVideo();
-                                      } else failure();
-                                  },
+                                  success: res => res.authSetting["scope.writePhotosAlbum"] ? saveVideo() : failure(),
                                   fail:res => failure()
                               });
                           }
@@ -1055,7 +1055,8 @@ export default {
                   wx.showModal({
                       title: "读记事",
                       content: "警告：无法读取权限获取信息！",
-                      showCancel: false
+                      showCancel: false,
+                      comfirmText: "了解"
                   });
               }
           });
@@ -1065,33 +1066,27 @@ export default {
           if (res.type === "touchstart") {
               temp.anchor[2] = [res.clientY, new Date().getTime()];
           } else if (res.type === "touchend") {
-              var moveDistance = (res.mp.changedTouches[0].pageY - temp.anchor[2][0]) * SWT;
-              if (Math.abs(moveDistance) >= 187.5 && new Date().getTime() - temp.anchor[2][1] < 1000) {
+              var moveDistance = (res.clientY - temp.anchor[2][0]) * SWT;
+              if (Math.abs(moveDistance) >= 187.5 && new Date().getTime() - temp.anchor[2][1] < 1e3) {
                   delete temp.anchor[2];
                   var whichCanShow = []; //可查看的记事类型的队列
                   //向上述队列推入所有当前可以查看的记事类型的标签
                   if (this.text.content !== "") whichCanShow.push("text");
-                  if (this.playback.length > 0) {
-                      whichCanShow.push("record");
-                      if ((temp.timerQueue || []).length > 0) {
-                          innerAudioContext.stop();
-                          for (let value of temp.timerQueue) clearTimeout(value);
-                          this.playback.forEach(ele => ele.opacity = 1);
-                          temp.timerQueue = [];
-                      }
-                  }
+                  if (this.playback.length > 0) whichCanShow.push("record");
                   if (this.img.length > 0) whichCanShow.push("image");
                   if (this.video !== "") whichCanShow.push("video");
                   var index = whichCanShow.indexOf(this.sw);
-                  if (moveDistance > 0) {
-                      if (index + 1 < whichCanShow.length) { //判断下一种记事类型是否存在
-                          this.sw = whichCanShow[index + 1];
-                      } else this.backToOverview();
-                  } else {
-                      if (index - 1 >= 0) { //判断上一种记事类型是否存在
-                          this.sw = whichCanShow[index - 1];
-                      } else this.backToOverview();
+                  if (this.sw === "record" && (temp.timerQueue || []).length > 0) {
+                      innerAudioContext.stop();
+                      for (let value of temp.timerQueue) clearTimeout(value);
+                      this.playback.forEach(ele => ele.opacity = 1);
+                      temp.timerQueue = [];
                   }
+                  if (moveDistance > 0 && index + 1 < whichCanShow.length) {
+                    this.sw = whichCanShow[index + 1];
+                  } else if (moveDistance < 0 && index - 1 >= 0) {
+                    this.sw = whichCanShow[index - 1];
+                  } else this.backToOverview();
               }
           }
       }

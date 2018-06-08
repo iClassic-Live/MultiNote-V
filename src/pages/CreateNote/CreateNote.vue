@@ -1,17 +1,16 @@
 <template>
-    <view id="page" v-bind:style="{display:ifReady ? 'block' : 'none'}">
+    <view id="page" v-bind:style="{display:isReady ? 'block' : 'none'}">
 
         <scroll-view id="background">
-            <swiper v-bind:current="current" circular=true interval=30
-             v-bind:autoplay="autoplay" @change="changeBackgroundImage"
-             @animationfinish="changeBackgroundImage">
+            <swiper v-bind:current="current" v-bind:duration="duration"
+             circular=true @change="changeBackgroundImage">
                 <swiper-item v-for="item in bgiQueue" :key="item">
                     <img mode="aspectFill" v-bind:src="item"/>
                 </swiper-item>
             </swiper>
         </scroll-view>
 
-        <view id="mainFn" v-if="!useCamera">
+        <scroll-view id="mainFn" v-if="!useCamera">
 
             <view class="menu" v-if="noting === 'menu'">
 
@@ -23,17 +22,16 @@
                 </view>
 
                 <view class="selection">
-                    <view class="text sel" @tap="getTextFn" @longpress="getTextFn" v-bind:style="{border:'9rpx solid ' + (text.content.length > 0 ? 'orange' : 'green')}">
-                        <img src="/static/images/text.png">
-                    </view>
-                    <view class="record sel" @tap="getRecordFn" @longpress="getRecordFn" v-bind:style="{border:'9rpx solid ' + playbackStorageSign}">
-                        <img src="/static/images/record.png">
-                    </view>
-                    <view class="photo sel" @tap="getImageFn" @longpress="getImageFn" v-bind:style="{border:'9rpx solid ' + imgStorageSign}">
-                        <img src="/static/images/image.png">
-                    </view>
-                    <view class="video sel" @tap="getVideoFn" @longpress="getVideoFn" v-bind:style="{border:'9rpx solid ' + (video.length > 0 ? 'red' : 'green')}">
-                        <img src="/static/images/video.png">
+                    <view v-bind:id="note" v-for="note in ['text', 'record', 'image', 'video']" :key="note"
+                     v-bind:class="'sel ' + note" @tap="getNoteFn" @longpress="getNoteFn">
+                        <img v-bind:src="'/static/images/' + note + '.png'">
+                        <view v-bind:class="'outer outer-' + item" v-for="(item, id) in ['l', 'r']" :key="id"
+                         v-bind:style="{'background-color': note === 'text' ? 'orange' : 'red'}">
+                            <view v-bind:class="'inner inner-' + item" v-bind:style="{transform: 'rotate(' + ((item === 'r' ?
+                             note === 'text' ? text_r : note === 'record' ? playback_r : note === 'image' ? img_r : video_r :  //各进度条右半边
+                             note === 'text' ? text_l : note === 'record' ? playback_l : note === 'image' ? img_l : video_l) * 180) + 'deg)'}  /*各进度条左半边*/">
+                            </view>
+                        </view>
                     </view>
                     <view class="save_cancel sel" @tap="save_cancel">
                         <img v-bind:src="'/static/images/' + saveSign + '.png'"/>
@@ -50,7 +48,7 @@
 
             </view>
 
-            <scroll-view class="noting" v-if="noting !== 'menu'">
+            <view class="noting" v-if="noting !== 'menu'">
 
                 <view class="exit">
                     <img v-bind:src="'/static/images/' + (noting || 'null') + '.png' " @tap="backToMenu"/>
@@ -107,12 +105,12 @@
 
                 </view>
 
-            </scroll-view>
+            </view>
 
-        </view>
+        </scroll-view>
 
         <view id="cameraFn" v-if="useCamera">
-            <camera v-bind:style="{display:!ifPreview ? 'block' : 'none'}" v-bind:flash="flash" v-bind:device-position="camSet">
+            <camera v-bind:style="{display:!isPreview ? 'block' : 'none'}" v-bind:flash="flash" v-bind:device-position="camSet">
                 <cover-view class="top">
                     <cover-view class="goback" v-if="!shootNow" @tap="backToMenu">
                         <cover-image mode="widthFix" src="/static/images/goback.png"></cover-image>
@@ -138,7 +136,7 @@
                     <cover-view class="qualitySet" v-if="noting === 'photoTaking'" @tap="setQuality">{{quality}}</cover-view>
                 </cover-view>
             </camera>
-            <view class="preview" v-bind:style="{display: ifPreview ? 'block' : 'none'}">
+            <view class="preview" v-bind:style="{display: isPreview ? 'block' : 'none'}">
                 <img v-bind:src="imagePreview"/>
             </view>
         </view>
@@ -223,7 +221,7 @@
             }
         /* 记事类型选择区 & 保存/取消记事区 */
             .menu .selection {
-                position: relative;
+                position: absolute;
                 height: 75vw;
                 width: 75vw;
                 display: flex;
@@ -232,16 +230,52 @@
             }
             .menu .selection .sel {
                 position: absolute;
-                height: 37.5%;
-                width: 37.5%;
+                height: 40%;
+                width: 40%;
                 border-radius: 50%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
             }
-            .menu .selection .sel img {
+            .sel .outer {
+                position: absolute;
+                box-sizing: border-box;
+                height: 30vw;
+                width: 15vw;
+                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: -1;
+            }
+            .sel .outer-r {
+                border-radius: 0 15vw 15vw 0;
+                right: 0;
+            }
+            .sel .outer-l {
+                border-radius: 15vw 0 0 15vw;
+                left: 0;
+            }
+            .outer .inner {
                 height: 100%;
                 width: 100%;
+                background-color: green;
+            }
+            .inner-r {
+                border-radius: 0 15vw 15vw 0;
+                transform-origin: left center;
+                background: transparent;
+            }
+            .inner-l {
+                border-radius: 15vw 0 0 15vw;
+                transform-origin: right center;
+                background: transparent;                
+            }
+            .menu .selection .sel img {
+                box-sizing: border-box;
+                height: 100%;
+                width: 100%;
+                border: 1.25vw solid rgba(255, 255, 255, 0);
             }
             .menu .selection .text {
                 top: 0;
@@ -251,13 +285,17 @@
                 top: 0;
                 left: 0;
             }
-            .menu .selection .photo {
+            .menu .selection .image {
                 bottom: 0;
                 right: 0;
             }
             .menu .selection .video {
                 bottom: 0;
                 left: 0;
+            }
+            .menu .selection .save_cancel img {
+                height: 100%;
+                width: 100%;
             }
         /* 背景图切换 */
             .menu .bgiChange {
@@ -513,25 +551,24 @@
 
 const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的相对像素比
 
-//用于监测是否已开启相关权限的标识初始化
-var getRecordAccess = true; //录音权限的标识，默认权限开启
-var getCameraAccess = true; //相机权限的标识，默认权限开启
-var getAlbumAccess = true; //存图到相册权限的标识，默认权限开启
-
 //语音记事初始化
 const recorderManager = wx.getRecorderManager(); //获取全局唯一的录音管理器 recorderManager
 const innerAudioContext = wx.createInnerAudioContext(); //创建并返回内部audio上下文 innerAudioContext 对象
 
-var temp;  //临时数据存储器
+var temp = {  //临时数据存储器
+
+    bgiQueue: wx.getStorageSync("bgiQueue")
+
+}
 
 export default {
-
 
     data() {
       return {
 
-        ifReady: false,
+        isReady: false,
 
+        duration: 0,
         current: wx.getStorageSync("bgiCurrent"),
         bgiQueue: wx.getStorageSync("bgiQueue"),
         autoplay: false,
@@ -540,6 +577,8 @@ export default {
         bgiChange: 0,
         
         title: "",
+        text_r: 0,
+        text_l: 0,
         titleDefault: "记事标题",
 
         text: new Object(),
@@ -550,14 +589,21 @@ export default {
         ],
 
         playback: [],
+        playback_r: 0,
+        playback_l: 0,
         breathing: null,
         rotating: null,
 
         img: [],
+        img_r: 0,
+        img_l: 0,
+        imgStorageSign: `red 0 0%`,
         imgCurrent: 0,
         reRender: false,
 
         video: "",
+        video_r: 0,
+        video_l: 0,
 
         //相机组件功能初始化
         flash: "off", //闪光灯设置，默认关闭
@@ -565,7 +611,7 @@ export default {
         camSet: "back",
         camSign: 1, //摄像头反转图标的透明度设置
         camChange: 0,
-        ifPreview: false,
+        isPreview: false,
         shootNow: false, //录像进行时标识，录像未进行时为false
         quality: "Normal", //照片质量设定，默认为普通
 
@@ -575,70 +621,22 @@ export default {
     /* 原生生命周期函数--监听页面加载 */
     onLoad(res) {
         console.log("CreateNote onLoad");
+
+        temp = {  //初始化临时数据存储器
+
+            bgiQueue: temp.bgiQueue
+
+        };
+
+        if (this.bgiQueue.length > temp.bgiQueue.length) this.bgiQueue = temp.bgiQueue;
         var bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
-        wx.getSetting({  //获取录音功能、相机功能和保存到相册功能的权限获取情况
-            success: res => { //若能或取权限获取情况
-                function failure(prop) { //建立权限获取失败函数
-                    var content;
-                    switch (prop) {
-                        case "scope.record": {
-                            getRecordAccess = false;
-                            content = "未获取录音权限";
-                            break;
-                        };
-                        case "scope.camera": {
-                            getCameraAccess = false;
-                            content = "未获取相机权限";
-                            break;
-                        };
-                        case "scope.writePhotosAlbum": {
-                            getAlbumAccess = false;
-                            content = "将无法写入相册";
-                            break;
-                        };
-                    }
-                    wx.showToast({
-                        title: content,
-                        image: "/static/images/warning.png"
-                    });
-                }
-                if (Object.keys(res.authSetting).length === 3) { //若相应权限都曾要求授权
-                for (let prop in res.authSetting) {
-                    if (!res.authSetting[prop]) { //若有相应权限没有授权
-                        wx.authorize({ //弹出相应权限的授权提示框
-                            scope: prop,
-                            fail: res => wx.openSetting({ fail: res => failure(prop) })  //若授权失败，主动打开系统授权窗口
-                        });
-                    }
-                }
-                } else { //若有权限未曾提出授予
-                var scopeQueue = ["scope.record", "scope.camera", "scope.writePhotosAlbum"];
-                scopeQueue.forEach(ele => {
-                    if (ele in res.authSetting === false) {
-                        wx.authorize({  //弹出相应权限的授权提示框
-                            scope: ele,
-                            fail: res => wx.openSetting({ fail: res => failure(prop) })  //若授权失败，主动打开系统授权窗口
-                        });
-                    }
-                });
-                }
-            },
-            fail: res => {  //若无法获取录音功能、相机功能和保存到相册功能的权限获取情况
-                //限制相应功能或组件的使用
-                getRecordAccess = false;
-                getCameraAccess = false;
-                getAlbumAccess = false;
-                wx.showModal({  //弹出权限获取情况无法读取的警告窗口
-                    title: "写记事",
-                    content: "警告：无法读取权限获取信息，录音、相机和写入相册功能将不可用！",
-                    showCancel: false
-                });
-            }
-        });
+        this.duration = 500;
+
         if (wx.getStorageInfoSync().keys.indexOf("item_to_edit") !== -1) {
             var note = wx.getStorageSync("note")[wx.getStorageSync("item_to_edit")];
-            this.title = note.title;
+            this.title = note.title.content;
+            temp.isAutotitle = note.title.isAutotitle;
             this.text = note.text;
             this.playback = note.record.map(ele => {
                 ele.opacity = 1;
@@ -647,22 +645,7 @@ export default {
             this.img = note.image;
             this.video = note.video;
         } else {
-            this.title = (function () {
-                var dateFn = new Date();
-                return ("记事 " +
-                    dateFn.getFullYear() +
-                    ((dateFn.getMonth() + 1).toString().length < 2 ?
-                    "0" + (dateFn.getMonth() + 1) : dateFn.getMonth() + 1) +
-                    (dateFn.getDate().toString().length < 2 ?
-                    "0" + dateFn.getDate() : dateFn.getDate()) +
-                    (dateFn.getHours().toString().length < 2 ?
-                    "0" + dateFn.getHours() : dateFn.getHours()) +
-                    (dateFn.getMinutes().toString().length < 2 ?
-                    "0" + dateFn.getMinutes() : dateFn.getMinutes()) +
-                    (dateFn.getSeconds().toString().length < 2 ?
-                    "0" + dateFn.getSeconds() : dateFn.getSeconds())
-                );
-            })();
+            this.title = this.autotitleCreater();
             this.text = {
                 content: "",
                 fontSize: "100%",
@@ -673,29 +656,21 @@ export default {
             if (this.img.length > 0) this.img = [];
             if (this.video !== "") this.video = "";
         }
-        
+
         if (this.flash !== "off") this.flash = "off";
         if (this.camSet !== "back") this.camSet = "back";
-        if (this.breathing !== null) this.breathing = null;
-        if (this.rotating !== null) this.rotating = null;
-
-        temp = {  //初始化临时数据存储器
-
-            bgiChangeComplete: true
-
-        };
 
         //预注册录音开始事件
         recorderManager.onStart(res => {
-            if (temp.ifEndRecording) { //当录音开始进程偷跑时截停
-                temp.ifEndRecording = false;
+            if (temp.isEndRecording) { //当录音开始进程偷跑时截停
+                temp.isEndRecording = false;
                 recorderManager.stop();
                 recorderManager.onStop();
             } else { //当录音正常进行时录音
                 temp.recordNow = true;
-                if (temp.ifShowToast) {
+                if (temp.isShowToast) {
                     wx.hideToast();
-                    temp.ifShowToast = false;
+                    temp.isShowToast = false;
                 }
                 this.breathingEffection("start");
                 this.progressbar("start");
@@ -704,7 +679,7 @@ export default {
                     temp.recordNow = false;
                     this.breathingEffection("stop");
                     this.progressbar("stop");
-                    if (res.duration >= 120000) {
+                    if (res.duration >= 12e4) {
                         wx.showToast({
                             title: "录音限时两分钟",
                             image: "/static/images/warning.png",
@@ -721,8 +696,8 @@ export default {
                             title: "第" + this.playback.length + "条语音记事",
                             icon: "none",
                             success(res) {
-                                temp.ifShowToast = true;
-                                setTimeout(() => temp.ifShowToast = false, 1450);
+                                temp.isShowToast = true;
+                                setTimeout(() => temp.isShowToast = false, 1450);
                             }
                         });
                         wx.vibrateShort();
@@ -745,12 +720,86 @@ export default {
             this.progressbar("stop");
         });
 
+        this.$nextTick(() => this.isReady = true);
+
+        ["record", "camera", "writePhotosAlbum"].forEach(ele => wx.authorize({
+            scope: `scope.${ele}`,
+            success: res => {
+                switch(ele) {
+                    case "record": temp.getRecordAccess = true;break;
+                    case "camera": temp.getCameraAccess = true;break;
+                    case "write": temp.getWritePhotosAlbumAccess = true;break;
+                }
+            }
+        }));
+
     },
 
-    /* 原生生命周期函数--监听页面初次渲染完成 */
-    onReady(res) {
-        console.log("CreateNote onReady");
-        this.ifReady = true;
+    /* 原生生命周期函数--监听页面显示 */
+    onShow(res) {
+        console.log("CreateNote onShow");
+
+        let start = (new Date()).getTime();
+        wx.getSetting({
+
+            complete: access => {
+                temp.getRecordAccess = access.authSetting["scope.record"];
+                temp.getCameraAccess = access.authSetting["scope.camera"];
+                temp.getWritePhotosAlbumAccess = access.authSetting["scope.writePhotosAlbum"];
+
+                let Access = []; //授权提示列表
+                let needs = ["record", "camera", "writePhotosAlbum"]; //需要检查的权限
+                let noAskForever = wx.getStorageSync("noAskForever"); //相关权限在页面永久拒绝授予列表
+                if (needs.every(ele => Object.keys(access.authSetting).indexOf(`scope.${ele}`) > -1)) { //当录音、摄像头、保存到相册的权限都曾被提请授予
+                    needs.forEach(ele => {
+                        if ( !(noAskForever || {})[ele] && !access.authSetting[`scope.${ele}`] ) { //当权限未被授予且未被永久拒绝授予
+                            switch(ele) {
+                                case "record": Access.push("录音功能");break;
+                                case "camera": Access.push("摄像头调用");break;
+                                case "writePhotosAlbum": Access.push("相册写入");break;
+                            }
+                        }
+                    });
+                }
+                if (Access.length > 0 && (new Date()).getTime() - start <= 1e3) {  //适应无网时API的回调一直未完成的情况
+                    wx.showModal({
+                        title: "写记事",
+                        content: `当前仍有${Access.join("、")}的权限未被授予，是否提请授权？`,
+                        success: res => {
+                            if (res.cancel) {
+                                wx.showModal({
+                                    title: "写记事",
+                                    content: "如果拒绝授权，则部分功能可能受限, 是否永久拒绝相应授权？",
+                                    success: res => {
+                                        if (res.confirm) {
+                                            let noAskForever = (wx.getStorageSync("noAskForever") || {});
+                                            wx.setStorageSync("noAskForever", {
+                                                "record": Access.indexOf("录音功能") > -1 ? true : noAskForever["record"],
+                                                "camera": Access.indexOf("摄像头调用") > -1 ? true : noAskForever["camera"],
+                                                "writePhotosAlbum": Access.indexOf("相册写入") > -1 ? true : noAskForever["writePhotosAlbum"]
+                                            });
+                                        }
+                                    }
+                                });
+                            }else if (res.confirm) wx.openSetting({ complete: res => console.log("openSetting: " ,res.authSetting) });
+                        }
+                    });
+                }else if (!!noAskForever) { //静默检测
+                    let isNeedReWrite = false;
+                    needs.forEach(ele => {
+                        let auth = access.authSetting[`scope.${ele}`];
+                        let noAsk = (noAskForever || {})[ele];
+                        if (auth && noAsk) (noAskForever || {})[ele] = false; //若用户手动授权但此权限在永久拒绝列表中仍为真时
+                        if (!auth && !noAsk) (noAskForever || {})[ele] = true; //若用户手动解除授权但此权限在永久拒绝列表中却为假时
+                        isNeedReWrite = (auth && noAsk) || (!auth && !noAsk);
+                    });
+                    if (isNeedReWrite) wx.setStorageSync("noAskForever", noAskForever);
+                }
+
+            }
+
+        });
+
     },
 
     /* 原生生命周期函数--监听页面隐藏 */
@@ -758,7 +807,12 @@ export default {
 
     /* 原生生命周期函数--监听页面卸载 */
     onUnload(res) {
-        this.ifReady = false;
+        this.isReady = false;
+        //复位所有记事进度条
+        ["text", "playback", "img", "video"].forEach(ele => {
+            if (this[`${ele}_r`] !== 0) this[`${ele}_r`] = 0;
+            if (this[`${ele}_l`] !== 0) this[`${ele}_l`] = 0;
+        });
     },
 
 
@@ -770,22 +824,6 @@ export default {
                 ["lighter", "normal", "bolder"].indexOf(this.text.fontWeight),
                 ["#000" , "#F00", "#8A2BE2", "#00BFFF", "#228B22", "#D2691E"].indexOf(this.text.fontColor)
             ]
-        },
-
-        playbackStorageSign: function () {
-            switch(this.playback.length) {
-                case 0: { return "green" }break;
-                case 5: { return "red" }break;
-                default: { return "orange" }break;
-            }
-        },
-
-        imgStorageSign: function () {
-            switch(this.img.length) {
-                case 0: { return "green" }break;
-                case 5: { return "red" }break;
-                default: { return "orange" }break;
-            }
         },
 
         saveSign: function () {
@@ -827,6 +865,64 @@ export default {
 
     },
 
+    watch: {
+
+        noting: function (res) {
+            if (arguments[0] === "menu") {
+                switch(arguments[1]) {
+                    case "text": {
+                        if (temp.isAutotitle) {
+                            if (this.text.content !== "" && temp.textContent !== this.text.content) {
+                                temp.textContent = this.text.content;
+                                wx.showModal({
+                                    title: "写记事",
+                                    content: `是否把当前记事文本${this.text.content.length > 25 ? "的前二十五个字" : ""}作为记事摘要？`,
+                                    success: res => {
+                                        if (res.confirm) {
+                                            this.title = this.text.content.substring(0, 25);
+                                            temp.isAutotitle = false;
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }break;
+                    case "record": this.stopPlaying();break;
+                    case "image": this.imgCurrent !== 0 && (this.imgCurrent = 0);break;
+                }
+            }
+            return this.noting;
+        },
+
+        text: function (res) {
+            this.storageSign("text", res.content !== "" ? 2 : 0);
+        },
+
+        "text.content": function (res) {
+            this.storageSign("text", res !== "" ? 2 : 0);
+        },
+
+        playback: function (res) {
+            if (temp.isAutotitle) this.title = this.autotitleCreater(true);
+
+            this.storageSign("playback", res.length * 400 / 1e3);
+
+        },
+
+        img: function (res) {
+            if (temp.isAutotitle) this.title = this.autotitleCreater(true);
+
+            this.storageSign("img", res.length * 400 / 1e3);
+        },
+
+        video: function (res) {
+            if (temp.isAutotitle) this.title = this.autotitleCreater(true);
+
+            this.storageSign("video", res !== "" ? 2 : 0);
+        },
+
+    },
+
 
     methods: {
 
@@ -835,6 +931,7 @@ export default {
         titleContent(res) {
             if (res.type === "input") {
                 this.title = res.mp.detail.value;
+                if(temp.isAutotitle) temp.isAutotitle = false;
                 if (this.title.length > 0 && this.title.trim().length === 0) {
                     this.title = "";
                     wx.showToast({
@@ -854,43 +951,53 @@ export default {
                 if (this.title.length === 0) {
                     if (this.text.content.length > 0) {
                         this.title = this.text.content;
-                    }else {
-                        this.title = (() => {
-                            var dateFn = new Date();
-                            let content = "";
-                            if (this.playback.length > 0) content += "R";
-                            if (this.img.length > 0) content += "I";
-                            if (this.video.length > 0) content += "V";
-                            if (content === "") content = "记事";
-                            return (content + " " +
-                                dateFn.getFullYear() +
-                                ((dateFn.getMonth() + 1).toString().length < 2 ?
-                                "0" + (dateFn.getMonth() + 1) : dateFn.getMonth() + 1) +
-                                (dateFn.getDate().toString().length < 2 ?
-                                "0" + dateFn.getDate() : dateFn.getDate()) +
-                                (dateFn.getHours().toString().length < 2 ?
-                                "0" + dateFn.getHours() : dateFn.getHours()) +
-                                (dateFn.getMinutes().toString().length < 2 ?
-                                "0" + dateFn.getMinutes() : dateFn.getMinutes()) +
-                                (dateFn.getSeconds().toString().length < 2 ?
-                                "0" + dateFn.getSeconds() : dateFn.getSeconds())
-                            );
-                        })()
-                    }
+                    }else this.title = this.autotitleCreater();
                     wx.showToast({
                         title: "标题已自动填充",
                         image: "/static/images/warning.png"
                     });
                 }
                 this.title = this.title.replace(/\s+(?![\S\s]+)/, ""); //去除标题末尾多余的空格
-                if (this.title.length > 20) {
-                    this.title = this.title.substring(0, 20);
-                    wx.showToast({
-                        title: "标题最长二十字",
-                        image: "/static/images/warning.png"
+                if (this.title.length > 25) {
+                    this.title = this.title.substring(0, 25);
+                    wx.showModal({
+                        title: "写记事",
+                        content: "警告：标题最长二十五个字！",
+                        showCancel: false,
+                        confirmText: "了解"
                     });
                 }
             }
+        },
+        //默认摘要生成器
+        autotitleCreater(tag) {
+            temp.isAutotitle = true;
+            let content = [];
+            if (this.playback.length > 0) content.push("语音");
+            if (this.img.length > 0) content.push("图片");
+            if (this.video !== "") content.push("视频");
+            if (content.length === 0) content.push("记事");
+            if (tag) return `${content.join("+")} ${this.title.match(/\d+/g)[0]}`;
+            let dateFn = new Date();
+            let timeStamp = dateFn.getFullYear() +
+                            ((dateFn.getMonth() + 1).toString().length < 2 ?
+                            "0" + (dateFn.getMonth() + 1) : dateFn.getMonth() + 1) +
+                            (dateFn.getDate().toString().length < 2 ?
+                            "0" + dateFn.getDate() : dateFn.getDate()) +
+                            (dateFn.getHours().toString().length < 2 ?
+                            "0" + dateFn.getHours() : dateFn.getHours()) +
+                            (dateFn.getMinutes().toString().length < 2 ?
+                            "0" + dateFn.getMinutes() : dateFn.getMinutes()) +
+                            (dateFn.getSeconds().toString().length < 2 ?
+                            "0" + dateFn.getSeconds() : dateFn.getSeconds());
+            return `${content.join("+")} ${timeStamp}`;
+        },
+
+        //事件分发
+        getNoteFn(res) {
+            let target = res.currentTarget.id.split("");
+            target[0] = target[0].toUpperCase();
+            this[`get${target.join("")}Fn`](res);
         },
 
         /* 文本记事 */
@@ -947,35 +1054,33 @@ export default {
                     switch (res.mp.detail.column) {
                         case 0: { //字体大小的设定；
                             switch (res.mp.detail.value) {
-                                case 0: { this.text.fontSize = "50%" }; break;
-                                case 1: { this.text.fontSize = "75%" }; break;
-                                case 2: { this.text.fontSize = "100%" }; break;
-                                case 3: { this.text.fontSize = "150%" }; break;
-                                case 4: { this.text.fontSize = "200%" }; break;
+                                case 0: this.text.fontSize = "50%";break;
+                                case 1: this.text.fontSize = "75%";break;
+                                case 2: this.text.fontSize = "100%";break;
+                                case 3: this.text.fontSize = "150%";break;
+                                case 4: this.text.fontSize = "200%";break;
                             }
-                        }; break;
+                        };break;
                         case 1: { //字体粗细的设定
                             switch (res.mp.detail.value) {
-                                case 0: { this.text.fontWeight = "lighter" }; break;
-                                case 1: { this.text.fontWeight = "normal" }; break;
-                                case 2: { this.text.fontWeight = "bolder" }; break;
+                                case 0: this.text.fontWeight = "lighter";break;
+                                case 1: this.text.fontWeight = "normal";break;
+                                case 2: this.text.fontWeight = "bolder";break;
                             }
-                        }; break;
+                        };break;
                         case 2: { //字体颜色的设定
                             switch (res.mp.detail.value) {
-                                case 0: { this.text.fontColor = "#000"; }; break;
-                                case 1: { this.text.fontColor = "#F00"; }; break;
-                                case 2: { this.text.fontColor = "#8A2BE2"; }; break;
-                                case 3: { this.text.fontColor = "#00BFFF"; }; break;
-                                case 4: { this.text.fontColor = "#228B22"; }; break;
-                                case 5: { this.text.fontColor = "#D2691E"; }; break;
+                                case 0: this.text.fontColor = "#000";break;
+                                case 1: this.text.fontColor = "#F00";break;
+                                case 2: this.text.fontColor = "#8A2BE2";break;
+                                case 3: this.text.fontColor = "#00BFFF";break;
+                                case 4: this.text.fontColor = "#228B22";break;
+                                case 5: this.text.fontColor = "#D2691E";break;
                             }
-                        }; break;
+                        };break;
                     }
                 }break;
-                case "cancel": {
-                    this.text = JSON.parse(temp.text);
-                }break;
+                case "cancel": this.text = JSON.parse(temp.text);break;
                 case "longpress": {
                     if (JSON.stringify(this.text) !== temp.text) {
                         wx.showModal({
@@ -1003,52 +1108,60 @@ export default {
                 wx.showModal({
                     title: "语音记事",
                     content: "是否清空语音记事？",
-                    success: res => res.confirm ? this.playback = [] : false
+                    success: res => res.confirm && (this.playback = [])
                 });
             }
         },
         //开始语音记事
         startRecord(res) {
-            if (this.playback.length < 5) {
-                temp.ifEndRecording = false;
-                recorderManager.start({
-                    duration: 120000,
-                    sampleRate: 44100,
-                    numberOfChannels: 2,
-                    encodeBitRate: 192000,
-                    format: "aac",
-                    frameSize: 50
-                });
-            } else {
-                wx.showToast({
-                    title: "语音记事已满",
-                    image: "/static/images/warning.png"
+            this.stopPlaying();
+            if (temp.getRecordAccess) {
+                if (this.playback.length < 5) {
+                    temp.isEndRecording = false;
+                    recorderManager.start({
+                        duration: 12e4,
+                        sampleRate: 44100,
+                        numberOfChannels: 2,
+                        encodeBitRate: 192e3,
+                        format: "aac",
+                        frameSize: 50
+                    });
+                } else {
+                    wx.showToast({
+                        title: "语音记事已满",
+                        image: "/static/images/warning.png"
+                    });
+                }
+            }else {
+                temp.noRecordAccess = true;
+                wx.showModal({
+                    title: "语音记事",
+                    content: "警告：录音功能被限制！",
+                    showCancel: false,
+                    confirmText: "了解"
                 });
             }
         },
         //结束语音记事
         stopRecord(res) {
-            temp.ifEndRecording = true;
-            if (!temp.recordNow && this.playback.length < 5) {
-                wx.showToast({
-                    title: "录制语音请长按",
-                    image: "/static/images/warning.png",
-                    mask: true
-                });
-            } else recorderManager.stop();
+            if (!temp.noRecordAccess) {
+                temp.isEndRecording = true;
+                if (!temp.recordNow && this.playback.length < 5) {
+                    wx.showToast({
+                        title: "录制语音请长按",
+                        image: "/static/images/warning.png",
+                        mask: true
+                    });
+                } else recorderManager.stop();
+            }
         },
         //语音记事的预览
         playbackFn(res) {
-            if (res.currentTarget.id) {
+            if (!!res.currentTarget.id) {
                 var index = res.currentTarget.id.match(/\d+/g)[0];
-                innerAudioContext.autoplay = true;
+                this.stopPlaying();
                 innerAudioContext.src = this.playback[index].path;
-                if ("playbackSign" in temp) {
-                    clearTimeout(temp.playbackSign);
-                    this.playback.forEach(ele => ele.opacity = 1);
-                    delete temp.playbackSign;
-                }
-                (function playing (flag, duration) {
+                (function playing (flag = false, duration = this.playback[index].duration) {
                     if (this.playback[index].opacity < 0.3) flag = true;
                     if (this.playback[index].opacity > 1) flag = false;
                     if (flag) {
@@ -1060,17 +1173,13 @@ export default {
                             playing.apply(this, [flag, duration]);
                         } else this.playback[index].opacity = 1;
                     }, 35);
-                }).apply(this, [false, this.playback[index].duration]);
-            }else if ("playbackSign" in temp) {
-                clearTimeout(temp.playbackSign);
-                delete temp.playbackSign;
-                this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : false);
-                innerAudioContext.stop();
-            }
+                }).call(this);
+            }else this.stopPlaying();
         },
         //语音记事的删除
         deleteRecord(res) {
             var index = res.currentTarget.id.match(/\d+/g)[0];
+            this.stopPlaying();
             wx.showModal({
             title: "语音记事",
             content: "是否删除本条语音？",
@@ -1096,10 +1205,10 @@ export default {
         //呼吸效果的启停
         breathingEffection(tag) {
             if (tag === "start") {
-                var breathing = wx.createAnimation({ duration: 120000 });
+                var breathing = wx.createAnimation({ duration: 12e4 });
                 for (let i = 0; i < 120; i++) {
-                    breathing.backgroundColor("#FF0000").step({ duration: 1000 })
-                             .backgroundColor("#F5F5DC").step({ duration: 1000 });
+                    breathing.backgroundColor("#FF0000").step({ duration: 1e3 })
+                             .backgroundColor("#F5F5DC").step({ duration: 1e3 });
                 }
                 this.breathing = breathing.export();
             } else if (tag === "stop") {
@@ -1115,13 +1224,22 @@ export default {
         //进度指示的启停
         progressbar(tag) {
             switch(tag) {
-                case "start": { var val = [120000, 360]; }break;
-                case "stop":{  var val = [1000, 0]; }break;
+                case "start": { var val = [12e4, 360]; }break;
+                case "stop":{  var val = [1e3, 0]; }break;
                 default: return;
             }
             this.rotating = wx.createAnimation({ duration: val[0] })
                               .rotate(val[1]).step({ duration: val[0] })
                               .export();
+        },
+        //截停正在播放的语音
+        stopPlaying(res) {
+            if ("playbackSign" in temp) {
+                innerAudioContext.stop();
+                clearTimeout(temp.playbackSign);
+                this.playback.forEach(ele => ele.opacity = 1);
+                delete temp.playbackSign;
+            }
         },
 
         /* 图片记事 */
@@ -1131,21 +1249,28 @@ export default {
                 var selection = sel => {
                     switch(sel) {
                         case 0: {
-                            this.noting = "photoTaking";
-                            this.camSet = "back";
-                            this.flash = "off";
-                            this.qualitySet = "Normal";
+                            if (temp.getCameraAccess) {
+                                this.noting = "photoTaking";
+                                this.camSet = "back";
+                                this.flash = "off";
+                                this.qualitySet = "Normal";
+                            }else wx.showModal({
+                                title: "图片记事",
+                                content: "警告：摄像头调用受限！",
+                                showCancel: false,
+                                confirmText: "了解"
+                            });
                         }break;
                         case 1: {
                             wx.chooseImage({
                                 count: 5 - this.img.length,
                                 sourceType: ["album"],
-                                success: res => {
-                                    res.tempFilePaths.forEach(ele => {
-                                        this.img.push({ path: ele });
-                                    });
-                                    this.imgCurrent = this.img.length - 1;
-                                    this.noting = "image";
+                                success: res => res.tempFilePaths.forEach(ele =>  this.img.push({ path: ele })),
+                                complete: res => {
+                                    if (/ok/g.test(res.errMsg)) {
+                                        this.imgCurrent = this.img.length -1;
+                                        this.noting = "image";
+                                    }
                                 }
                             });
                         }break;
@@ -1155,27 +1280,16 @@ export default {
                         }break;
                     }
                 }
-                if (getCameraAccess) {
-                    if (this.img.length < 5) {
-                        wx.showActionSheet({
-                            itemList: (() => {
-                                if (this.img.length > 0) {
-                                    return ["拍照", "从本地获取图片", "预览图片"];
-                                }else return ["拍照", "从本地获取图片"];
-                            })(),
-                            success: res => selection(res.tapIndex)
-                        });
-                    }else selection(2);
-                }else {
-                    if (this.img.length === 0) {
-                        selection(1);
-                    }else if (this.img.length < 5) {
-                        wx.showActionSheet({
-                            itemList: ["从本地获取图片", "预览图片"],
-                            success: res => selection(res.tapIndex + 1)
-                        });
-                    }else selection(2);
-                }
+                if (this.img.length < 5) {
+                    wx.showActionSheet({
+                        itemList: (() => {
+                            if (this.img.length > 0) {
+                                return ["拍照", "从本地获取图片", "预览图片"];
+                            }else return ["拍照", "从本地获取图片"];
+                        })(),
+                        success: res => selection(res.tapIndex)
+                    });
+                }else selection(2);
             }else if (res.type === "longpress" && this.img.length > 0) {
                 wx.showModal({
                     title: "图片记事",
@@ -1201,27 +1315,34 @@ export default {
                 itemList: ["保存本张图片到本地", "删除本张图片"],
                 success: res => {
                     if (res.tapIndex === 0) {
-                        wx.saveImageToPhotosAlbum({
-                            filePath: this.img[index].path,
-                            success: res => {
-                                wx.showToast({
-                                    title: "保存操作成功！",
-                                    image: "/static/images/success.png",
-                                    mask: true
-                                });
-                            },
-                            fail: res => {
-                                wx.showToast({
-                                    title: "保存操作失败！",
-                                    image: "/static/images/error.png",
-                                    mask: true
-                                });
-                            }
+                        if (temp.getWritePhotosAlbumAccess) {
+                            wx.saveImageToPhotosAlbum({
+                                filePath: this.img[index].path,
+                                success: res => {
+                                    wx.showToast({
+                                        title: "保存操作成功！",
+                                        image: "/static/images/success.png",
+                                        mask: true
+                                    });
+                                },
+                                fail: res => {
+                                    wx.showToast({
+                                        title: "保存操作失败！",
+                                        image: "/static/images/error.png",
+                                        mask: true
+                                    });
+                                }
+                            });
+                        }else wx.showModal({
+                            title: "图片记事",
+                            content: "警告：相册写入受限！",
+                            showCancel: false,
+                            confirmText: "了解"
                         });
                     }else {
                         this.reRender = true;
-                        if (this.imgCurrent > 0) this.imgCurrent -= 1;
                         this.img.splice(index, 1);
+                        if (this.imgCurrent >= this.img.length) this.imgCurrent -= 1;
                         if (this.img.length === 0) this.noting = "menu";
                         this.reRender = false;
                     }
@@ -1245,29 +1366,34 @@ export default {
                             wx.showModal({
                                 title: "视频记事",
                                 content: "是否即刻预览视频？",
-                                success: res => res.confirm ? this.noting = "video" : false
+                                success: res => res.confirm && (this.noting = "video")
                             });
                         }
                     });
                 }
                 if (this.video.length === 0) {
-                    if (getCameraAccess) {
-                        wx.showActionSheet({
+                    wx.showActionSheet({
                         itemList: ["录像", "从本地获取视频"],
                         success: res => {
                             if (res.tapIndex === 0) {
-                                this.camSet = "back";
-                                this.noting = "videoTaking";
+                                if (temp.getCameraAccess) {
+                                    this.camSet = "back";
+                                    this.noting = "videoTaking";
+                                }else wx.showModal({
+                                    title: "视频记事",
+                                    content: "警告：摄像头调用受限！",
+                                    showCancel: false,
+                                    confirmText: "了解"
+                                });
                             }else selectVideo();
                         }
-                        });
-                    }else selectVideo();
+                    });
                 }else this.noting = "video";
             }else if (res.type === "longpress" && this.video !== "") {
                 wx.showModal({
                     title: "视频记事",
                     content: "是否清空视频记事？",
-                    success: res => res.confirm ? this.video = "" : false
+                    success: res => res.confirm && (this.video = "")
                 });
             }
         },
@@ -1278,22 +1404,30 @@ export default {
                 success: res => {
                     if (!res.tapIndex) {
                         wx.createVideoContext(this.video).pause();
-                        wx.saveVideoToPhotosAlbum({
-                            filePath: this.video,
-                            success: res => {
-                                wx.showToast({
-                                    title: "保存操作成功！",
-                                    image: "/static/images/succes.png",
-                                    mask: true
-                                });
-                            },
-                            fail: res => {
-                                wx.showToast({
-                                    title: "保存操作失败！",
-                                    image: "/static/images/error.png",
-                                    mask: true
-                                });
-                            }
+                        if (temp.getWritePhotosAlbumAccess) {
+                            wx.saveVideoToPhotosAlbum({
+                                filePath: this.video,
+                                success: res => {
+                                    wx.showToast({
+                                        title: "保存操作成功！",
+                                        image: "/static/images/succes.png",
+                                        mask: true
+                                    });
+                                },
+                                fail: res => {
+                                    "wait to code";
+                                    wx.showToast({
+                                        title: "保存操作失败！",
+                                        image: "/static/images/error.png",
+                                        mask: true
+                                    });
+                                }
+                            });
+                        }else wx.showModal({
+                            title: "视频记事",
+                            content: "警告：相册写入受限！",
+                            showCancel: false,
+                            confirmText: "了解"
                         });
                     } else {
                         wx.showModal({
@@ -1316,53 +1450,67 @@ export default {
             });
         },
 
+        //各记事的进度条动画
+        storageSign(type, target, step) {
+            var [r, l, for_l] = [this[`${type}_r`], this[`${type}_l`], (target * 1e3 - 1e3) / 1e3];
+            if (step === undefined) step = (target - (r + l)) / 20;
+            if (step > 0 && target > 1) {
+                (r += step) < 1 ? r = 1 : target < 1 && r < target && (r = target);
+            }else if (step < 0 && target < 1) {
+                l > 0 ? (l += step) < 0 && (l = 0) : r > target && (r += step) < target && (r = target);
+            }else if (step * (l - for_l) < 0 && target > 1) (l += step) < for_l || (l = for_l);
+            ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? r : l);
+            if (Math.abs(target - (this[`${type}_r`] + this[`${type}_l`])) <= Math.abs(step)) {
+                if (target > 1) {
+                    ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? 1 : for_l);
+                }else ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? target : 0);
+            }else {
+                if (`${type}_progress_timer` in temp) {
+                    clearInterval(temp[`${type}_progress_timer`]);
+                    delete temp[`${type}_progress_timer`];
+                }
+                temp[`${type}_progress_timer`] = setTimeout(() => this.storageSign(type, target, step), 25);
+            }
+        },
+
         /* 菜单栏的返回 */
         backToMenu(res) {
-            setTimeout(() => {
-                if ("playbackSign" in temp) {
-                    clearTimeout(temp.playbackSign);
-                    delete temp.playbackSign;
-                    this.playback.forEach(ele => ele.opacity !== 1 ? ele.opacity = 1 : false);
-                    innerAudioContext.stop();
-                }
-                if (this.imgCurrent !== 0) this.mgCurrent = 0;
-                this.noting = "menu";
-            }, Math.random() * 10);
+            setTimeout(() => this.noting = "menu", 50);
         },
 
         /* 背景图的切换 */
         changeBackgroundImage(res) {
-            if (res.type === "touchstart") {
-                temp.anchor = res.clientX;
-            }else if (res.type === "touchmove" && temp.bgiChangeComplete) {
-                var moveDistance = res.clientX - temp.anchor;
-                if (Math.abs(moveDistance) >= 37.5) {
-                    if (moveDistance > 0) {
-                        this.bgiChange = 1;
-                    }else this.bgiChange = -1;
-                }else this.bgiChange = moveDistance / 37.5;
-            }else if (res.type === "touchend") {
-                if (Math.abs(this.bgiChange) === 1) temp.bgiChangeComplete = false;
-                switch(this.bgiChange) {
-                    case 1: {
-                        if (this.current >= this.bgiQueue.length - 1) {
-                            this.autoplay = true;
-                        }else this.current += 1;
-                    }break;
-                    case -1: {
-                        if (this.current <= 0) {
-                            this.current = this.bgiQueue.length - 1;
-                        }else this.current -= 1;
-                    }break;
-                }
-                if (this.bgiChange !== 0) this.bgiChange = 0;
-            }else if (res.type === "change") {
-                if (this.autoplay) {
-                    this.current = 0;
-                    this.autoplay = false;
-                }
-                wx.setStorageSync("bgiCurrent", res.mp.detail.current);
-            }else if (res.type === "animationfinish") temp.bgiChangeComplete = true;
+            switch(res.type) {
+                case "touchstart": temp.anchor = res.clientX;break;
+                case "touchmove": {
+                    var moveDistance = (res.clientX - temp.anchor) * SWT;
+                    if (Math.abs(moveDistance) >= 37.5) {
+                        if (moveDistance > 0) {
+                            this.bgiChange = 1;
+                        }else this.bgiChange = -1;
+                    }else this.bgiChange = moveDistance / 37.5;                    
+                }break;
+                case "touchend": {
+                    switch(this.bgiChange) {
+                        case 1: {
+                            if (this.current >= this.bgiQueue.length - 1) {
+                                this.bgiQueue.push(...temp.bgiQueue);
+                                this.$nextTick(() => this.current += 1);
+                            }else this.current += 1;
+                        }break;
+                        case -1: {
+                            if (this.current <= 0) {
+                                if (this.bgiQueue.length > temp.bgiQueue.length) {
+                                    this.bgiQueue = temp.bgiQueue;
+                                    this.$nextTick(() => this.current = this.bgiQueue.length - 1);
+                                }else this.current = this.bgiQueue.length - 1;
+                            }else this.current -= 1;
+                        }break;
+                    }
+                    if (this.bgiChange !== 0) this.bgiChange = 0;
+                }break;
+                case "change": wx.setStorageSync("bgiCurrent", this.current % temp.bgiQueue.length);break;
+            }
         },
 
         /* 当前记事的保存与取消 */
@@ -1388,7 +1536,7 @@ export default {
                             var id = wx.getStorageSync("item_to_edit");
                             if (!id && id !== 0) id = note.length;
                             var item = {
-                                title: this.title,
+                                title: { content: this.title, isAutotitle: temp.isAutotitle },
                                 text: this.text,
                                 record: this.playback.map(ele => {
                                     delete ele.index;
@@ -1417,7 +1565,7 @@ export default {
                                     this[prop].forEach((ele, index) => {
                                         wx.saveFile({
                                             tempFilePath: ele.path,
-                                            success: res => "savedFilePath" in res ? this[prop][index].path = res.savedFilePath : false,
+                                            success: res => "savedFilePath" in res && (this[prop][index].path = res.savedFilePath),
                                             complete: res => {
                                                 restToSave -= 1;
                                                 if (restToSave === 0) save_jump();
@@ -1427,7 +1575,7 @@ export default {
                                 }else {
                                     wx.saveFile({
                                         tempFilePath: this.video,
-                                        success: res => "savedFilePath" in res ? this.video = res.savedFilePath : false,
+                                        success: res => "savedFilePath" in res && (this.video = res.savedFilePath),
                                         complete: res => {
                                             restToSave -= 1;
                                             if (restToSave === 0) save_jump();
@@ -1472,8 +1620,8 @@ export default {
         //摄像头前后置的切换
         changeCam(res) {
             switch(this.camSet) {
-                case "back": { this.camSet = "front"; }break;
-                case "front": { this.camSet = "back"; }break;
+                case "back": this.camSet = "front";break;
+                case "front": this.camSet = "back";break;
             }
             var camChange = tag => {
                 tag -= 1;
@@ -1485,8 +1633,8 @@ export default {
         //闪关灯的开启与关闭
         flashSet(res) {
             switch(this.flash) {
-                case "on": { this.flash = "off" }break;
-                case "off": { this.flash = "on" }break;
+                case "on": this.flash = "off";break;
+                case "off": this.flash = "on";break;
             }
         },
         //图片的预览
@@ -1525,14 +1673,14 @@ export default {
                                 duration: 500,
                                 mask: this.img.length === 5
                             });
-                            this.ifPreview = true;
+                            this.isPreview = true;
                             setTimeout(() => {
-                                this.ifPreview = false;
+                                this.isPreview = false;
                                 if (this.img.length === 5) {
                                     this.imgCurrent = 4;
                                     this.noting = "image";
                                 }
-                            }, 1000);
+                            }, 1e3);
                         }),
                         fail: res => setImmediate(() => {
                             wx.showToast({
@@ -1586,7 +1734,7 @@ export default {
                                     title: "视频记事成功！",
                                     image: "/static/images/success.png",
                                     mask: true,
-                                    success: setTimeout(() => this.noting = "video", 1000)
+                                    success: setTimeout(() => this.noting = "video", 1e3)
                                 });
                             }),
                             fail: res => setImmediate(() => {
@@ -1617,9 +1765,9 @@ export default {
         //拍照质量的设定
         setQuality(res) {
             switch(this.quality) {
-                case "Low": { this.quality = "Normal"; }break;
-                case "Normal": { this.quality = "High"; }break;
-                case "High": { this.quality = "Low"; }break;
+                case "Low": this.quality = "Normal";break;
+                case "Normal": this.quality = "High";break;
+                case "High": this.quality = "Low";break;
             }
         }
 

@@ -87,37 +87,32 @@ export default {
   data() {
     return {
 
-      version: "MultiNote V1.6.4 Build",
+      version: "MultiNote V1.7.0 Build",
 
       backgroundImage: wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")]
       
     }
   },
 
-
-  /* 原生生命周期函数--监听页面加载 */
+  /* 原生生命周期钩子--监听页面加载 */
   onLoad(res) {
     console.log("Home onLoad");
+    
     this.backgroundImage = wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")];
+
   },
 
 
   methods: {
 
     startUsing(res) {
-      if (wx.getStorageSync("note").length > 0) {
-        wx.showLoading({
-          title: "正在进入读记事",
-          mask: true
+      let length = wx.getStorageSync("note").length;
+      if (length > 0 && length < 30) {
+        wx.showActionSheet({
+          itemList: ["创建记事", "查阅记事"],
+          success: res => wx.redirectTo({ url: `../${res.tapIndex === 0 ? "Create" : "Show"}Note/main` })
         });
-        wx.redirectTo({ url: "../ShowNote/main" });
-      } else {
-        wx.showLoading({
-          title: "正在进入写记事",
-          mask: true
-        });
-        wx.redirectTo({ url: "../CreateNote/main" });
-      }
+      } else wx.redirectTo({ url: `../${length === 0 ? "Create" : "Show"}Note/main` });
     }
 
   },
