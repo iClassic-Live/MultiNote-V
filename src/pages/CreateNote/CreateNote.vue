@@ -59,7 +59,8 @@
                     <view class="text sel" v-if="noting === 'text'">
 
                         <view class="writing">
-                            <textarea v-bind:value="text.content || ''" maxlength="none" v-bind:style="{fontSize: text.fontSize || '100%', 'font-weight': text.fontWeight || 'normal', color: text.fontColor || '#000'}" @focus="textContent" @input="textContent" @blur="textContent"></textarea>
+                            <textarea v-bind:value="text.content || ''" maxlength="none" v-bind:style="{fontSize: text.fontSize || '100%',
+                            'font-weight': text.fontWeight || 'normal', color: text.fontColor || '#000'}" @blur="textContent"></textarea>
                         </view>
 
                         <view class="font">
@@ -555,11 +556,7 @@ const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的�
 const recorderManager = wx.getRecorderManager(); //获取全局唯一的录音管理器 recorderManager
 const innerAudioContext = wx.createInnerAudioContext(); //创建并返回内部audio上下文 innerAudioContext 对象
 
-var temp = {  //临时数据存储器
-
-    bgiQueue: wx.getStorageSync("bgiQueue")
-
-}
+var temp = { bgiQueue: wx.getStorageSync("bgiQueue") } //临时数据存储器
 
 export default {
 
@@ -581,7 +578,7 @@ export default {
         text_l: 0,
         titleDefault: "记事标题",
 
-        text: new Object(),
+        text: { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"},
         font: [ //字体样式选择器相应选择项的提示序列
             ["超小号", "小号", "默认", "大号", "超大号"],
             ["轻盈", "默认", "粗壮"],
@@ -622,19 +619,17 @@ export default {
     onLoad(res) {
         console.log("CreateNote onLoad");
 
-        temp = {  //初始化临时数据存储器
-
-            bgiQueue: temp.bgiQueue
-
-        };
+        temp = { bgiQueue: temp.bgiQueue };  //初始化临时数据存储器
 
         if (this.bgiQueue.length > temp.bgiQueue.length) this.bgiQueue = temp.bgiQueue;
-        var bgiCurrent = wx.getStorageSync("bgiCurrent");
+        let bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
         this.duration = 500;
 
         if (wx.getStorageInfoSync().keys.indexOf("item_to_edit") !== -1) {
-            var note = wx.getStorageSync("note")[wx.getStorageSync("item_to_edit")];
+            temp["item_to_edit"] = wx.getStorageSync("item_to_edit");
+            wx.removeStorageSync("item_to_edit");
+            let note = wx.getStorageSync("note")[temp["item_to_edit"]];
             this.title = note.title.content;
             temp.isAutotitle = note.title.isAutotitle;
             this.text = note.text;
@@ -644,18 +639,9 @@ export default {
             });
             this.img = note.image;
             this.video = note.video;
-        } else {
-            this.title = this.autotitleCreater();
-            this.text = {
-                content: "",
-                fontSize: "100%",
-                fontWeight: "normal",
-                fontColor: "#000",
-            }
-            if (this.playback.length > 0) this.playback = [];
-            if (this.img.length > 0) this.img = [];
-            if (this.video !== "") this.video = "";
-        }
+        } else this.title = this.autotitleCreater();
+
+        temp.beforeEdit = JSON.stringify({ title: this.title, text: this.text, playback: this.playback, img: this.img, video: this.video });
 
         if (this.flash !== "off") this.flash = "off";
         if (this.camSet !== "back") this.camSet = "back";
@@ -808,11 +794,9 @@ export default {
     /* 原生生命周期函数--监听页面卸载 */
     onUnload(res) {
         this.isReady = false;
-        //复位所有记事进度条
-        ["text", "playback", "img", "video"].forEach(ele => {
-            if (this[`${ele}_r`] !== 0) this[`${ele}_r`] = 0;
-            if (this[`${ele}_l`] !== 0) this[`${ele}_l`] = 0;
-        });
+        for (let type of ["text", "playback", "img", "video"]) for (let side of ["r", "l"]) this[`${type}_${side}`] = 0;
+        this.playback = []; this.img = []; this.video = "";
+        this.text = { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"};
     },
 
 
@@ -827,10 +811,10 @@ export default {
         },
 
         saveSign: function () {
-            let condition = [this.text.content, this.playback, this.img, this.video];
-            if (this.title.length > 0 && condition.some(ele => ele.length > 0)) {
-                return "save";
-            }else return "cancel";
+            let conditionA = this.text.content !== "" || ["playback", "img", "video"].some(ele => this[ele].length > 0);
+            let status = { title: this.title, text: this.text, playback: this.playback, img: this.img, video: this.video };
+            let conditionB = JSON.stringify(status) !== temp.beforeEdit;
+            return conditionA && conditionB ? "save" : "cancel";
         },
 
         useCamera: function () {
@@ -1009,34 +993,21 @@ export default {
                 wx.showModal({
                     title: "文本记事",
                     content: "是否清空文本记事？",
-                    success: res => {
-                        if (res.confirm) {
-                            this.text = {
-                                content: "",
-                                fontSize: "100%",
-                                fontWeight: "normal",
-                                fontColor: "#000",
-                                fontIndex: [2, 1, 0]
-                            }
-                        }
-                    }
+                    success: res => res.confirm && (this.text = { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000" })
                 });
             }
         },
         //文本记事的撰写
         textContent(res) {
-            if (res.type === "input") {
-                this.text.content = res.mp.detail.value;
-            }else if (res.type === "blur") {
-                if (res.mp.detail.value.length > 0 && !res.mp.detail.value.trim()) {
-                    this.text.content = "";
-                    wx.showToast({
-                        title: "不能全输入空格",
-                        image: "/static/images/warning.png"
-                    });
-                }
-                this.text.content = this.text.content.replace(/\s+(?![\S\s]+)/, ""); //去除文本末尾多余的空格
+            this.text.content = res.mp.detail.value;
+            if (res.mp.detail.value.length > 0 && !res.mp.detail.value.trim()) {
+                this.text.content = "";
+                wx.showToast({
+                    title: "不能全输入空格",
+                    image: "/static/images/warning.png"
+                });
             }
+            this.text.content = this.text.content.replace(/\s+(?![\S\s]+)/, ""); //去除文本末尾多余的空格
         },
         //字体样式的修改
         setFontStyle(res) {
@@ -1265,7 +1236,7 @@ export default {
                             wx.chooseImage({
                                 count: 5 - this.img.length,
                                 sourceType: ["album"],
-                                success: res => res.tempFilePaths.forEach(ele =>  this.img.push({ path: ele })),
+                                success: res => res.tempFilePaths.map(ele => this.img.push({ path: ele })),
                                 complete: res => {
                                     if (/ok/g.test(res.errMsg)) {
                                         this.imgCurrent = this.img.length -1;
@@ -1294,12 +1265,7 @@ export default {
                 wx.showModal({
                     title: "图片记事",
                     content: "是否清空图片记事？",
-                    success: res => {
-                        if (res.confirm) {
-                            this.img = [];
-                            this.imgCurrent = 0;
-                        }
-                    }
+                    success: res => res.confirm && (this.img = [])
                 });
             }
         },
@@ -1452,14 +1418,16 @@ export default {
 
         //各记事的进度条动画
         storageSign(type, target, step) {
-            var [r, l, for_l] = [this[`${type}_r`], this[`${type}_l`], (target * 1e3 - 1e3) / 1e3];
+            var [r, l, for_l] = [this[`${type}_r`] || 0, this[`${type}_l`] || 0, (target * 1e3 - 1e3) / 1e3];
             if (step === undefined) step = (target - (r + l)) / 20;
-            if (step > 0 && target > 1) {
-                (r += step) < 1 ? r = 1 : target < 1 && r < target && (r = target);
-            }else if (step < 0 && target < 1) {
-                l > 0 ? (l += step) < 0 && (l = 0) : r > target && (r += step) < target && (r = target);
-            }else if (step * (l - for_l) < 0 && target > 1) (l += step) < for_l || (l = for_l);
-            ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? r : l);
+            if (step > 0) {
+                (r += step) > (target < 1 ? target : 1) && (r = target < 1 ? target : 1);
+                r === 1 && (l += step) > for_l && (l = for_l);
+            }else if (step < 0) {
+                (l += step) < (target > 1 ? for_l : 0) && (l = target > 1 ? for_l : 0);
+                l === 0 && (r += step) < target && (r = target);
+            }else return;
+            ["r", "l"].map(ele =>  this[`${type}_${ele}`] = ele === "r" ? r : l);
             if (Math.abs(target - (this[`${type}_r`] + this[`${type}_l`])) <= Math.abs(step)) {
                 if (target > 1) {
                     ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? 1 : for_l);
@@ -1520,7 +1488,6 @@ export default {
                 content: "是否" + (this.saveSign === "save" ? "保存" : "取消") + "当前记事？",
                 success: res => {
                     function redirecting () {  //页面重定向函数及删除记录需要修改的记事的序号的缓存
-                        wx.removeStorageSync("item_to_edit");
                         if (wx.getStorageSync("note").length > 0) {
                             wx.redirectTo({ url: "../ShowNote/main" });
                         }else wx.redirectTo({ url: "../Home/main" });
@@ -1533,7 +1500,7 @@ export default {
                         var restToSave = this.playback.length + this.img.length + 1;
                         var save_jump = () => {
                             var note = wx.getStorageSync("note");
-                            var id = wx.getStorageSync("item_to_edit");
+                            var id = temp["item_to_edit"];
                             if (!id && id !== 0) id = note.length;
                             var item = {
                                 title: { content: this.title, isAutotitle: temp.isAutotitle },
