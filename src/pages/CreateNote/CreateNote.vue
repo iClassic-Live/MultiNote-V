@@ -627,7 +627,7 @@ export default {
         this.duration = 500;
 
         if (wx.getStorageInfoSync().keys.indexOf("item_to_edit") !== -1) {
-            temp["item_to_edit"] = wx.getStorageSync("item_to_edit");
+            temp["item_to_edit"] = parseInt(wx.getStorageSync("item_to_edit"));
             wx.removeStorageSync("item_to_edit");
             let note = wx.getStorageSync("note")[temp["item_to_edit"]];
             this.title = note.title.content;
@@ -1558,15 +1558,14 @@ export default {
                                          this.playback.length === 0,
                                          this.img.length === 0,
                                          this.video === ""].every(ele => ele === true);
-                        let noteIndex = parseInt(wx.getStorageSync("item_to_edit"));
-                        if (Number.isInteger(noteIndex) && condition) {
+                        if (Number.isInteger(temp.item_to_edit) && condition) {
                             wx.showModal({
                                 title: "写记事",
                                 content: "当前记事已空，是否彻底删除当前记事？",
                                 success(res) {
                                     if (res.confirm) {
                                         var storage = wx.getStorageSync("note");
-                                        storage.splice(noteIndex, 1);
+                                        storage.splice(temp.item_to_edit, 1);
                                         wx.setStorageSync("note", storage);
                                         wx.showToast({
                                             title: "记事删除成功！",
