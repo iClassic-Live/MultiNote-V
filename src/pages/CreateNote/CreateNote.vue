@@ -27,9 +27,8 @@
                         <img v-bind:src="'/static/images/' + note + '.png'">
                         <view v-bind:class="'outer outer-' + item" v-for="(item, id) in ['l', 'r']" :key="id"
                          v-bind:style="{'background-color': note === 'text' ? 'orange' : 'red'}">
-                            <view v-bind:class="'inner inner-' + item" v-bind:style="{transform: 'rotate(' + ((item === 'r' ?
-                             note === 'text' ? text_r : note === 'record' ? playback_r : note === 'image' ? img_r : video_r :  //各进度条右半边
-                             note === 'text' ? text_l : note === 'record' ? playback_l : note === 'image' ? img_l : video_l) * 180) + 'deg)'}  /*各进度条左半边*/">
+                            <view v-bind:class="'inner inner-' + item" v-bind:style="{transform: 'rotate(' + 
+                             (storageProgress[note + '_' + item] * 180) + 'deg)'}">
                             </view>
                         </view>
                     </view>
@@ -574,8 +573,6 @@ export default {
         bgiChange: 0,
         
         title: "",
-        text_r: 0,
-        text_l: 0,
         titleDefault: "记事标题",
 
         text: { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"},
@@ -586,21 +583,22 @@ export default {
         ],
 
         playback: [],
-        playback_r: 0,
-        playback_l: 0,
         breathing: null,
         rotating: null,
 
         img: [],
-        img_r: 0,
-        img_l: 0,
         imgStorageSign: `red 0 0%`,
         imgCurrent: 0,
         reRender: false,
 
         video: "",
-        video_r: 0,
-        video_l: 0,
+
+        storageProgress: {  //各个记事的进度条
+            text_r: 0, text_l: 0,
+            record_r: 0, record_l: 0,
+            image_r: 0, image_l: 0,
+            video_r: 0, text_l: 0
+        },
 
         //相机组件功能初始化
         flash: "off", //闪光灯设置，默认关闭
@@ -794,7 +792,9 @@ export default {
     /* 原生生命周期函数--监听页面卸载 */
     onUnload(res) {
         this.isReady = false;
-        for (let type of ["text", "playback", "img", "video"]) for (let side of ["r", "l"]) this[`${type}_${side}`] = 0;
+        for (let type of ["text", "record", "image", "video"]) {
+            for (let side of ["r", "l"]) this.storageProgress[`${type}_${side}`] = 0;
+        }
         this.playback = []; this.img = []; this.video = "";
         this.text = { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"};
     },
@@ -889,14 +889,14 @@ export default {
         playback: function (res) {
             if (temp.isAutotitle) this.title = this.autotitleCreater(true);
 
-            this.storageSign("playback", res.length * 400 / 1e3);
+            this.storageSign("record", res.length * 400 / 1e3);
 
         },
 
         img: function (res) {
             if (temp.isAutotitle) this.title = this.autotitleCreater(true);
 
-            this.storageSign("img", res.length * 400 / 1e3);
+            this.storageSign("image", res.length * 400 / 1e3);
         },
 
         video: function (res) {
@@ -1418,7 +1418,9 @@ export default {
 
         //各记事的进度条动画
         storageSign(type, target, step) {
-            var [r, l, for_l] = [this[`${type}_r`] || 0, this[`${type}_l`] || 0, (target * 1e3 - 1e3) / 1e3];
+            var [r, l, for_l] = [this.storageProgress[`${type}_r`],
+                                 this.storageProgress[`${type}_l`],
+                                 (target * 1e3 - 1e3) / 1e3];
             if (step === undefined) step = (target - (r + l)) / 20;
             if (step > 0) {
                 (r += step) > (target < 1 ? target : 1) && (r = target < 1 ? target : 1);
@@ -1427,11 +1429,11 @@ export default {
                 (l += step) < (target > 1 ? for_l : 0) && (l = target > 1 ? for_l : 0);
                 l === 0 && (r += step) < target && (r = target);
             }else return;
-            ["r", "l"].map(ele =>  this[`${type}_${ele}`] = ele === "r" ? r : l);
-            if (Math.abs(target - (this[`${type}_r`] + this[`${type}_l`])) <= Math.abs(step)) {
+            ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? r : l);
+            if (Math.abs(target - (r + l)) <= Math.abs(step)) {
                 if (target > 1) {
-                    ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? 1 : for_l);
-                }else ["r", "l"].map(ele => this[`${type}_${ele}`] = ele === "r" ? target : 0);
+                    ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? 1 : for_l);
+                }else ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? target : 0);
             }else {
                 if (`${type}_progress_timer` in temp) {
                     clearInterval(temp[`${type}_progress_timer`]);
