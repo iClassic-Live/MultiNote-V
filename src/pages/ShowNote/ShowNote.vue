@@ -1,5 +1,5 @@
 <template>
-    <view id="page" v-bind:style="{display:ifReady ? 'block' : 'none'}">
+    <view id="page">
         
         <scroll-view id="background">
             <swiper v-bind:current="current" v-bind:duration="duration"
@@ -12,8 +12,8 @@
 
         <view id="main">
 
-            <view class="overview" v-bind:style="{display: sw === 'overview' ? 'block' : 'none',
-            'background-color': searching ? 'rgba(255, 255, 255, 0.5)' : 'none'}">
+            <view class="overview" v-show="sw === 'overview'"
+             v-bind:style="{'background-color': searching ? 'rgba(255, 255, 255, 0.5)' : 'none'}">
 
                 <view class="search">
                   <view class="input">
@@ -43,8 +43,8 @@
                 </scroll-view>
 
                 <view class="bottom" @tap="tapFn_on_overview">
-                    <view class="bgiChange" v-bind:style="{display: searching ? 'none' : 'block'}">
-                        <view class="bgiChange_cp">
+                    <view class="bgiChange">
+                        <view class="bgiChange_cp" v-show="!searching">
                         <img src="/static/images/bgiChange.png" v-bind:style="{left: 50 * bgiChange + '%'}" 
                          @touchstart="changeBackgroundImage" @touchmove="changeBackgroundImage"
                          @touchend="changeBackgroundImage">
@@ -56,7 +56,7 @@
                 </view>
             </view>
 
-            <view class="content" v-bind:style="{display:sw === 'overview' ? 'none' : 'block'}">
+            <view class="content" v-show="sw !== 'overview' && sw !== undefined">
 
                 <view class="head">
                     <view class="title">
@@ -71,22 +71,20 @@
 
                 <view class="show" @touchstart="jumpToAnother" @touchend="jumpToAnother">
 
-                  <view class="text" 
-                      v-bind:style="{display:sw === 'text' ? 'block' : 'none'}">
+                  <view class="text"  v-show="sw === 'text'">
                       <textarea v-bind:value="text.content !== undefined ? text.content : ''" disabled="true" @longpress="getTextInfo"
                       v-bind:style="{color: text.fontColor, 'font-weight':text.fontWeight, 'font-size':text.fontSize}">
                       </textarea>
                   </view>
                   
-                  <view class="record"
-                      v-bind:style="{display:sw === 'record' ? 'flex' : 'none'}" @tap.stop="getRecordInfo">
+                  <view class="record" v-show="sw === 'record'" @tap.stop="getRecordInfo">
                       <button v-bind:id="'record-item_' + index" v-for="(item, index) in playback" 
                       :key="index" v-bind:style="{opacity:item.opacity}" @tap.stop="getRecordInfo">
                       {{index + 1}}
                       </button>
                   </view>
 
-                  <view class="image image_cp" v-bind:style="{display:sw === 'image' ? 'block' : 'none'}">
+                  <view class="image image_cp" v-show="sw === 'image'">
                       <swiper class="image_cp" circular="true" v-bind:current="imgCurrent"
                       indicator-dots="true" indicator-active-color="#fff" @change="getImageInfo">
                           <swiper-item class="image_cp" v-bind:id="'images_' + index"
@@ -96,7 +94,7 @@
                       </swiper>
                   </view>
 
-                  <view class="video video_cp" v-bind:style="{display:sw === 'video' ? 'block' : 'none'}">
+                  <view class="video video_cp" v-show="sw === 'video'">
                       <video class="video_cp" v-bind:src="video" @longpress="getVideoInfo"></video>
                   </view>
                 
@@ -407,19 +405,13 @@ const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的�
 
 const innerAudioContext = wx.createInnerAudioContext();  //创建并返回内部 audio 上下文 innerAudioContext 对象
 
-var temp = {
-
-    bgiQueue: wx.getStorageSync("bgiQueue")
-
-}
+var temp = { bgiQueue: wx.getStorageSync("bgiQueue") }  //临时数据存储器
 
 export default {
 
 
     data() {
         return {
-
-            ifReady: false,
 
             duration: 0,
             current: wx.getStorageSync("bgiCurrent"),
@@ -471,7 +463,7 @@ export default {
         };
 
         if (this.bgiQueue.length > temp.bgiQueue.length) this.bgiQueue = temp.bgiQueue;
-        var bgiCurrent = wx.getStorageSync("bgiCurrent");
+        const bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
         this.duration = 500;
 
@@ -491,14 +483,11 @@ export default {
             }
         });
 
-        this.$nextTick(() => this.ifReady = true); //在页面初次渲染完成后再展示视图
-
     },
 
     /* 原生生命周期钩子--监听页面卸载 */
     onUnload(res) {
         console.log("ShowNote onUnload");
-        this.ifReady = false;
         this.duration = 0;
     },
 
@@ -511,8 +500,8 @@ export default {
       //列表项的点击操作
       tapFn_on_item(res) {
         if (!this.searching) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
-          var style = this.note[index].style;
+          const index = res.currentTarget.id.match(/\d+/g)[0];
+          const style = this.note[index].style;
           //取消菜单栏/删除按钮的拉出
           style.pullOutDelete !== 0 || style.pullOutMenu !== 0 ? this.hideMenu() : this.editNote(res);
         }else this.gotoResult(res);
@@ -547,7 +536,7 @@ export default {
             input = "";
         }else input = input.toString();
         if (input.length > 0) {
-            var result = [];
+            let result = [];
             switch(searchType) {
                 case "T": {
                     this.note.map(ele => ele.title.includes(input) ? result.push(ele) : "");
@@ -555,7 +544,7 @@ export default {
                 case "C": {
                     temp.note.map(ele => {
                         if (ele.text.content.includes(input)) {
-                            let contentIndex = ele.text.content.indexOf(input);
+                            const contentIndex = ele.text.content.indexOf(input);
                             let title = ele.text.content.substring(contentIndex);
                             if (contentIndex > 0) title = "..." + title;
                             result.push({
@@ -582,7 +571,7 @@ export default {
       },
       //获取所点击的搜索结果所在概览中的位置或阅览所点击的搜索结果的文本记事
       gotoResult(res) {
-        var index = res.currentTarget.id.match(/\d+/g)[0];
+        const index = res.currentTarget.id.match(/\d+/g)[0];
         this.searching = false;
         this.result = [];
         this.input = "";
@@ -601,7 +590,7 @@ export default {
           case "C": {
             this.sw = "text";
             this.title = this.note[index].title;
-            var note = temp.note[index];
+            const note = temp.note[index];
             this.text = note.text;
             if (note.record.length > 0) this.playback = note.record;
             if (note.image.length > 0) this.img = note.image;
@@ -612,15 +601,15 @@ export default {
 
       //列表项各子项下删除按钮和菜单栏的拉动操作
       pullOutDel_Menu(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
+          const index = res.currentTarget.id.match(/\d+/g)[0];
           if (res.type === "touchstart") {
-              var touch = res.clientX * SWT;
+              const touch = res.clientX * SWT;
               if (touch < 112.5 || touch > 637.5) temp.anchor[1] = touch;
               if (touch < 112.5) this.hideMenu(index, "pullOutDelete");
               if (touch > 637.5) this.hideMenu(index, "pullOutMenu");
               if (temp.hiding) delete temp.hiding;
           } else if (res.type === "touchmove" && typeof temp.anchor[1] === "number") {
-              var moveDistance = Math.abs(res.clientX * SWT - temp.anchor[1]);
+              const moveDistance = Math.abs(res.clientX * SWT - temp.anchor[1]);
               if (temp.anchor[1] > 637.5 && moveDistance <= 330) {
                   var target = "Menu";
               } else if (temp.anchor[1] < 112.5 && moveDistance <= 120) {
@@ -646,7 +635,7 @@ export default {
       },
       //列表项各子项下记事的修改操作
       editNote(res) {
-        var index = res.currentTarget.id.match(/\d+/g)[0];
+        const index = res.currentTarget.id.match(/\d+/g)[0];
         this.hideMenu();
         this.note[index].style.bgc = "#f00";
         this.note[index].style.fontColor = "#fff";
@@ -665,7 +654,7 @@ export default {
       },
       //列表项各子项下的删除操作
       deleteNote(res) {
-          var index = res.currentTarget.id.match(/\d+/g)[0];
+          const index = res.currentTarget.id.match(/\d+/g)[0];
           this.hideMenu(e => {
             this.note[index].style.bgc = "#F00";
             this.note[index].style.fontColor = "#fff";
@@ -679,14 +668,14 @@ export default {
                         title: "开始删除本记事",
                         mask: true
                     });
-                    var note = temp.note[index];
-                    var restToDelete = note.record.length + note.image.length + 1;
-                    var rewriteData = () => {
+                    const note = temp.note[index];
+                    let restToDelete = note.record.length + note.image.length + 1;
+                    const rewriteData = () => {
                         this.note.splice(index, 1);
                         this.note.forEach((ele, id) => ele.id !== id ? ele.id = id : true);
                         temp.note.splice(index, 1);
                         temp.note.forEach((ele, id) => ele.id !== id ? ele.id = id : true);
-                        var storage = wx.getStorageSync("note");
+                        let storage = wx.getStorageSync("note");
                         storage.splice(index, 1);
                         wx.setStorageSync("note", storage);
                         wx.hideLoading();
@@ -701,7 +690,7 @@ export default {
                             })()
                         });
                     }
-                    var removeSavedFile = path => {
+                    const removeSavedFile = path => {
                         wx.removeSavedFile({
                             filePath: path || "",
                             complete: res => {
@@ -728,17 +717,14 @@ export default {
       },
       //列表项各子项下的记事内容获取操作
       getContent(res) {
-          var label = res.currentTarget.id;
-          var index = label.match(/\d+/g)[0];
-          label = label.slice(0, label.indexOf("_"));
-          if (label === "text") {
-              var condition = temp.note[index].text.content.length > 0
-          } else var condition = temp.note[index][label].length > 0;
+          const index = res.currentTarget.id.match(/\d+/g)[0];
+          const label = res.currentTarget.id.slice(0, res.currentTarget.id.indexOf("_"));
+          const note = temp.note[index];
+          const condition = label === "text" ? note.text.content.length > 0 : note[label].length;
           if (condition) {
               this.hideMenu();
               this.sw = label;
               this.title = this.note[index].title;
-              let note = temp.note[index];
               if (note.text.content.length > 0) this.text = note.text;
               if (note.record.length > 0) this.playback = note.record.map(ele => {
                   ele.opacity = 1;
@@ -762,13 +748,13 @@ export default {
       //复位所有除指定排除项以外未复位的删除按钮和菜单栏
       hideMenu(id, type) {
           if (temp.hiding) return;
-          var unhiddenQueue = [];
+          let unhiddenQueue = [];
           this.note.forEach((ele, index) => {
               if (ele.style.pullOutDelete > 0) unhiddenQueue.push({ type: "pullOutDelete", index: index });
               if (ele.style.pullOutMenu > 0) unhiddenQueue.push({ type: "pullOutMenu", index: index });
           });
           const args = arguments;
-          var restToHide = unhiddenQueue.length;
+          let restToHide = unhiddenQueue.length;
           if (restToHide > 0) temp.hiding = true;
           unhiddenQueue.forEach((ele, index) => {
               if (ele.type !== type || ele.index !== parseInt(id)) {
@@ -796,7 +782,7 @@ export default {
         switch(res.type) {
             case "touchstart": { temp.anchor[0] = res.clientX; }break;
             case "touchmove": {
-                var moveDistance = (res.clientX - temp.anchor[0]) * SWT;
+                const moveDistance = (res.clientX - temp.anchor[0]) * SWT;
                 if (Math.abs(moveDistance) >= 37.5) {
                     if (moveDistance > 0) {
                         this.bgiChange = 1;
@@ -899,8 +885,8 @@ export default {
       //记事语音的操作
       getRecordInfo(res) {
           if (!!res.currentTarget.id) {
-            var index = res.currentTarget.id.match(/\d+/g)[0];
-            var timeStamp = new Date().getTime();
+            const index = res.currentTarget.id.match(/\d+/g)[0];
+            const timeStamp = new Date().getTime();
             if ((temp.timerQueue || []).length > 0) {
                 innerAudioContext.stop();
                 for (let value of temp.timerQueue) clearTimeout(value);
@@ -912,7 +898,7 @@ export default {
             (function breathingEffection () {
                 if (this.playback[index].opacity >= 1) temp.flag = true;
                 if (this.playback[index].opacity <= 0.3) temp.flag = false;
-                var timer = setTimeout(() => {
+                const timer = setTimeout(() => {
                     if (new Date().getTime() - timeStamp < this.playback[index].duration - 35) {
                         if (temp.flag) {
                             this.playback[index].opacity -= 0.025;
@@ -938,11 +924,11 @@ export default {
       //记事图片的操作
       getImageInfo(res) {
           if (res.type === "tap") {
-              var index = res.currentTarget.id.match(/\d+/g)[0];
+              const index = res.currentTarget.id.match(/\d+/g)[0];
               wx.previewImage({ urls: [this.img[index].path] });
           }else if (res.type === "longpress") {
-            var index = res.currentTarget.id.match(/\d+/g)[0];
-            var saveImage = () => {
+            const index = res.currentTarget.id.match(/\d+/g)[0];
+            const saveImage = () => {
                 wx.showModal({
                     title: "读记事",
                     content: "是否保存当前图片到本地？",
@@ -967,7 +953,7 @@ export default {
                     }
                 });
             }
-            function failure() {
+            const failure = () => {
                 wx.showModal({
                     title: "读记事",
                     content: "警告：没有保存到相册的权限，无法保存图片到本地！",
@@ -1003,7 +989,7 @@ export default {
       },
       //记事视频的操作
       getVideoInfo(res) {
-          var saveVideo = () => {
+          const saveVideo = () => {
               wx.showModal({
                   title: "读记事",
                   content: "是否保存当前视频到本地？",
@@ -1028,7 +1014,7 @@ export default {
                   }
               });
           }
-          function failure() {
+          const failure = () => {
               wx.showModal({
                   title: "读记事",
                   content: "警告：没有保存到相册的权限，无法保存视频到本地！",
@@ -1066,16 +1052,16 @@ export default {
           if (res.type === "touchstart") {
               temp.anchor[2] = [res.clientY, new Date().getTime()];
           } else if (res.type === "touchend") {
-              var moveDistance = (res.clientY - temp.anchor[2][0]) * SWT;
-              if (Math.abs(moveDistance) >= 187.5 && new Date().getTime() - temp.anchor[2][1] < 1e3) {
+              const moveDistance = (res.mp.changedTouches[0].clientY - temp.anchor[2][0]) * SWT;
+              if (Math.abs(moveDistance) >= 375 && new Date().getTime() - temp.anchor[2][1] < 1e3) {
                   delete temp.anchor[2];
-                  var whichCanShow = []; //可查看的记事类型的队列
+                  let whichCanShow = []; //可查看的记事类型的队列
                   //向上述队列推入所有当前可以查看的记事类型的标签
                   if (this.text.content !== "") whichCanShow.push("text");
                   if (this.playback.length > 0) whichCanShow.push("record");
                   if (this.img.length > 0) whichCanShow.push("image");
                   if (this.video !== "") whichCanShow.push("video");
-                  var index = whichCanShow.indexOf(this.sw);
+                  const index = whichCanShow.indexOf(this.sw);
                   if (this.sw === "record" && (temp.timerQueue || []).length > 0) {
                       innerAudioContext.stop();
                       for (let value of temp.timerQueue) clearTimeout(value);

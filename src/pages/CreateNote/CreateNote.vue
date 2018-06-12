@@ -1,5 +1,5 @@
 <template>
-    <view id="page" v-bind:style="{display:isReady ? 'block' : 'none'}">
+    <view id="page">
 
         <scroll-view id="background">
             <swiper v-bind:current="current" v-bind:duration="duration"
@@ -10,9 +10,9 @@
             </swiper>
         </scroll-view>
 
-        <scroll-view id="mainFn" v-if="!useCamera">
+        <scroll-view id="mainFn" v-if="!useCamera && useCamera !== undefined">
 
-            <view class="menu" v-if="noting === 'menu'">
+            <view class="menu" v-show="noting === 'menu'">
 
                 <view class="title">
                     摘要：
@@ -33,7 +33,7 @@
                         </view>
                     </view>
                     <view class="save_cancel sel" @tap="save_cancel">
-                        <img v-bind:src="'/static/images/' + saveSign + '.png'"/>
+                        <img v-bind:src="'/static/images/' + (saveSign || 'cancel') + '.png'"/>
                     </view>
                 </view>
 
@@ -47,15 +47,15 @@
 
             </view>
 
-            <view class="noting" v-if="noting !== 'menu'">
+            <view class="noting" v-show="noting !== 'menu' && noting !== undefined">
 
                 <view class="exit">
-                    <img v-bind:src="'/static/images/' + (noting || 'null') + '.png' " @tap="backToMenu"/>
+                    <img v-bind:src="'/static/images/' + (exitSign || 'null') + '.png'" @tap="backToMenu"/>
                 </view>
 
                 <view class="creating">
 
-                    <view class="text sel" v-if="noting === 'text'">
+                    <view class="text sel" v-show="noting === 'text'">
 
                         <view class="writing">
                             <textarea v-bind:value="text.content || ''" maxlength="none" v-bind:style="{fontSize: text.fontSize || '100%',
@@ -71,7 +71,7 @@
 
                     </view>
 
-                    <view class="record sel" v-if="noting === 'record'">
+                    <view class="record sel" v-show="noting === 'record'">
 
                         <view class="recording ele">
                             <view class="rec_component" v-bind:animation="rotating">
@@ -89,7 +89,7 @@
 
                     </view>
 
-                    <view class="photo sel" v-if="noting === 'image'">
+                    <view class="photo sel" v-show="noting === 'image'">
                         <swiper v-if="!reRender" v-bind:current="imgCurrent" circular="true"
                         indicator-dots="true" indicator-active-color="#fff" @animationfinish="setImgCurrent">
                             <swiper-item v-bind:id="'image_' + index" v-for="(item, index) in img" :key="index" @tap="previewImage" @longpress="save_deleteImage">
@@ -98,7 +98,7 @@
                         </swiper>
                     </view>
 
-                    <view class="video sel" v-if="noting === 'video'">
+                    <view class="video sel" v-show="noting === 'video'">
                         <video v-bind:src="video" @longpress="videoPreview"></video>
                     </view>
                     
@@ -110,33 +110,33 @@
         </scroll-view>
 
         <view id="cameraFn" v-if="useCamera">
-            <camera v-bind:style="{display:!isPreview ? 'block' : 'none'}" v-bind:flash="flash" v-bind:device-position="camSet">
+            <camera v-show="!isPreview" v-bind:flash="flash" v-bind:device-position="camSet">
                 <cover-view class="top">
-                    <cover-view class="goback" v-if="!shootNow" @tap="backToMenu">
+                    <cover-view class="goback" v-show="!shootNow" @tap="backToMenu">
                         <cover-image mode="widthFix" src="/static/images/goback.png"></cover-image>
                     </cover-view>
-                    <cover-view class="camSet" v-if="!shootNow" @tap="changeCam">
+                    <cover-view class="camSet" v-show="!shootNow" @tap="changeCam">
                         <cover-image mode="widthFix" src="/static/images/camSet.png" v-bind:style="{opacity: camSign }"></cover-image>
                     </cover-view>
-                    <cover-view class="flashSet" v-if="noting === 'photoTaking'" @tap="flashSet">
+                    <cover-view class="flashSet" v-show="noting === 'photoTaking'" @tap="flashSet">
                         <cover-image mode="widthFix" v-bind:src="'/static/images/' + flash + '.png'"></cover-image>
                     </cover-view>
-                    <cover-view class="shootSign" v-if="noting !== 'photoTaking'" v-bind:style="{opacity:shootSign}"></cover-view>
+                    <cover-view class="shootSign" v-show="noting !== 'photoTaking'" v-bind:style="{opacity:shootSign}"></cover-view>
                     </cover-view>
                 <cover-view class="bottom">
-                    <cover-view class="preview component" v-if="noting === 'photoTaking'" @tap="preview">
+                    <cover-view class="preview component" v-show="noting === 'photoTaking'" @tap="preview">
                         <cover-image mode="widthFix" v-bind:src="imagePreview"></cover-image>
                     </cover-view>
                     <cover-view class="cameraSet component" @tap="cameraSet">
                         <cover-image mode="widthFix" v-bind:src="cameraSign"></cover-image>
                     </cover-view>
-                    <cover-view class="changeMode component" v-if="!shootNow" @tap="changeMode">
+                    <cover-view class="changeMode component" v-show="!shootNow" @tap="changeMode">
                         <cover-image mode="widthFix" v-bind:src="modeChange"></cover-image>
                     </cover-view>
-                    <cover-view class="qualitySet" v-if="noting === 'photoTaking'" @tap="setQuality">{{quality}}</cover-view>
+                    <cover-view class="qualitySet" v-show="noting === 'photoTaking'" @tap="setQuality">{{quality}}</cover-view>
                 </cover-view>
             </camera>
-            <view class="preview" v-bind:style="{display: isPreview ? 'block' : 'none'}">
+            <view class="preview" v-show="isPreview">
                 <img v-bind:src="imagePreview"/>
             </view>
         </view>
@@ -186,7 +186,7 @@
         justify-content: center;
         align-items: center;
         }
-        /* 记事标题 */
+        /* 记事摘要 */
             .menu .title {
                 position: absolute;
                 top: 0;
@@ -562,8 +562,6 @@ export default {
     data() {
       return {
 
-        isReady: false,
-
         duration: 0,
         current: wx.getStorageSync("bgiCurrent"),
         bgiQueue: wx.getStorageSync("bgiQueue"),
@@ -573,7 +571,7 @@ export default {
         bgiChange: 0,
         
         title: "",
-        titleDefault: "记事标题",
+        titleDefault: "记事摘要",
 
         text: { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"},
         font: [ //字体样式选择器相应选择项的提示序列
@@ -587,7 +585,6 @@ export default {
         rotating: null,
 
         img: [],
-        imgStorageSign: `red 0 0%`,
         imgCurrent: 0,
         reRender: false,
 
@@ -620,14 +617,14 @@ export default {
         temp = { bgiQueue: temp.bgiQueue };  //初始化临时数据存储器
 
         if (this.bgiQueue.length > temp.bgiQueue.length) this.bgiQueue = temp.bgiQueue;
-        let bgiCurrent = wx.getStorageSync("bgiCurrent");
+        const bgiCurrent = wx.getStorageSync("bgiCurrent");
         if (this.current !== bgiCurrent) this.current = bgiCurrent;
         this.duration = 500;
 
         if (wx.getStorageInfoSync().keys.indexOf("item_to_edit") !== -1) {
             temp["item_to_edit"] = parseInt(wx.getStorageSync("item_to_edit"));
             wx.removeStorageSync("item_to_edit");
-            let note = wx.getStorageSync("note")[temp["item_to_edit"]];
+            const note = wx.getStorageSync("note")[temp["item_to_edit"]];
             this.title = note.title.content;
             temp.isAutotitle = note.title.isAutotitle;
             this.text = note.text;
@@ -704,8 +701,6 @@ export default {
             this.progressbar("stop");
         });
 
-        this.$nextTick(() => this.isReady = true);
-
         ["record", "camera", "writePhotosAlbum"].forEach(ele => wx.authorize({
             scope: `scope.${ele}`,
             success: res => {
@@ -723,7 +718,7 @@ export default {
     onShow(res) {
         console.log("CreateNote onShow");
 
-        let start = (new Date()).getTime();
+        const start = (new Date()).getTime();
         wx.getSetting({
 
             complete: access => {
@@ -732,9 +727,9 @@ export default {
                 temp.getWritePhotosAlbumAccess = access.authSetting["scope.writePhotosAlbum"];
 
                 let Access = []; //授权提示列表
-                let needs = ["record", "camera", "writePhotosAlbum"]; //需要检查的权限
-                let noAskForever = wx.getStorageSync("noAskForever"); //相关权限在页面永久拒绝授予列表
-                if (needs.every(ele => Object.keys(access.authSetting).indexOf(`scope.${ele}`) > -1)) { //当录音、摄像头、保存到相册的权限都曾被提请授予
+                const needs = ["record", "camera", "writePhotosAlbum"]; //需要检查的权限
+                const noAskForever = wx.getStorageSync("noAskForever"); //相关权限在页面永久拒绝授予列表
+                if (needs.every(ele => Object.keys(access.authSetting).indexOf(`scope.${ele}`) !== -1)) { //当录音、摄像头、保存到相册的权限都曾被提请授予
                     needs.forEach(ele => {
                         if ( !(noAskForever || {})[ele] && !access.authSetting[`scope.${ele}`] ) { //当权限未被授予且未被永久拒绝授予
                             switch(ele) {
@@ -756,11 +751,11 @@ export default {
                                     content: "如果拒绝授权，则部分功能可能受限, 是否永久拒绝相应授权？",
                                     success: res => {
                                         if (res.confirm) {
-                                            let noAskForever = (wx.getStorageSync("noAskForever") || {});
+                                            const noAskForever = (wx.getStorageSync("noAskForever") || {});
                                             wx.setStorageSync("noAskForever", {
-                                                "record": Access.indexOf("录音功能") > -1 ? true : noAskForever["record"],
-                                                "camera": Access.indexOf("摄像头调用") > -1 ? true : noAskForever["camera"],
-                                                "writePhotosAlbum": Access.indexOf("相册写入") > -1 ? true : noAskForever["writePhotosAlbum"]
+                                                "record": Access.indexOf("录音功能") !== -1 ? true : noAskForever["record"],
+                                                "camera": Access.indexOf("摄像头调用") !== -1 ? true : noAskForever["camera"],
+                                                "writePhotosAlbum": Access.indexOf("相册写入") !== -1 ? true : noAskForever["writePhotosAlbum"]
                                             });
                                         }
                                     }
@@ -771,8 +766,8 @@ export default {
                 }else if (!!noAskForever) { //静默检测
                     let isNeedReWrite = false;
                     needs.forEach(ele => {
-                        let auth = access.authSetting[`scope.${ele}`];
-                        let noAsk = (noAskForever || {})[ele];
+                        const auth = access.authSetting[`scope.${ele}`];
+                        const noAsk = (noAskForever || {})[ele];
                         if (auth && noAsk) (noAskForever || {})[ele] = false; //若用户手动授权但此权限在永久拒绝列表中仍为真时
                         if (!auth && !noAsk) (noAskForever || {})[ele] = true; //若用户手动解除授权但此权限在永久拒绝列表中却为假时
                         isNeedReWrite = (auth && noAsk) || (!auth && !noAsk);
@@ -791,18 +786,16 @@ export default {
 
     /* 原生生命周期函数--监听页面卸载 */
     onUnload(res) {
-        this.isReady = false;
-        for (let type of ["text", "record", "image", "video"]) {
-            for (let side of ["r", "l"]) this.storageProgress[`${type}_${side}`] = 0;
-        }
-        this.playback = []; this.img = []; this.video = "";
+        for (let type of ["text", "record", "image", "video"])
+        for (let side of ["r", "l"]) this.storageProgress[`${type}_${side}`] = 0;
         this.text = { content: "", fontSize: "100%", fontWeight: "normal", fontColor: "#000"};
+        this.playback = []; this.img = []; this.video = "";
     },
 
 
     computed: {
 
-        fontIndex: function () {
+        fontIndex(res) {
             return [
                 ["50%", "75%", "100%", "150%", "200%"].indexOf(this.text.fontSize),
                 ["lighter", "normal", "bolder"].indexOf(this.text.fontWeight),
@@ -810,24 +803,30 @@ export default {
             ]
         },
 
-        saveSign: function () {
-            let conditionA = this.text.content !== "" || ["playback", "img", "video"].some(ele => this[ele].length > 0);
-            let status = { title: this.title, text: this.text, playback: this.playback, img: this.img, video: this.video };
-            let conditionB = JSON.stringify(status) !== temp.beforeEdit;
+        saveSign(res) {
+            const conditionA = this.text.content !== "" || ["playback", "img", "video"].some(ele => this[ele].length > 0);
+            const status = { title: this.title, text: this.text, playback: this.playback, img: this.img, video: this.video };
+            const conditionB = JSON.stringify(status) !== temp.beforeEdit;
             return conditionA && conditionB ? "save" : "cancel";
         },
 
-        useCamera: function () {
+        exitSign(res) {
+            if (["text", "record", "image", "video"].indexOf(this.noting) !== -1) {
+                return this.noting;
+            }else return "null";
+        },
+
+        useCamera(res) {
             return /Taking/.test(this.noting);
         },
         
-        imagePreview: function () {
+        imagePreview(res) {
             if (this.img.length > 0) {
                 return this.img[this.img.length - 1].path;
             }else return "";
         },
 
-        cameraSign: function() {
+        cameraSign(res) {
             if (this.useCamera) {
                 if (/photo/.test(this.noting)) {
                     return "/static/images/photo.png";
@@ -837,7 +836,7 @@ export default {
             }else return "/static/images/null.png";
         },
 
-        modeChange: function () {
+        modeChange(res) {
             if (this.useCamera) {
                 if (/photo/.test(this.noting)) {
                     return "/static/images/shoot.png";
@@ -851,55 +850,60 @@ export default {
 
     watch: {
 
-        noting: function (res) {
+        noting(res) {
             if (arguments[0] === "menu") {
                 switch(arguments[1]) {
                     case "text": {
                         if (temp.isAutotitle) {
-                            if (this.text.content !== "" && temp.textContent !== this.text.content) {
-                                temp.textContent = this.text.content;
-                                wx.showModal({
-                                    title: "写记事",
-                                    content: `是否把当前记事文本${this.text.content.length > 25 ? "的前二十五个字" : ""}作为记事摘要？`,
-                                    success: res => {
-                                        if (res.confirm) {
-                                            this.title = this.text.content.substring(0, 25);
-                                            temp.isAutotitle = false;
+                            setImmediate(() => {
+                                if (this.text.content !== "" && temp.textContent !== this.text.content) {
+                                    temp.textContent = this.text.content;
+                                    wx.showModal({
+                                        title: "写记事",
+                                        content: `是否把当前文本${this.text.content.length > 30 ? "的前三十个字" : ""}作为记事摘要？`,
+                                        success: res => {
+                                            if (res.confirm) {
+                                                this.title = this.text.content.substring(0, 30);
+                                                temp.isAutotitle = false;
+                                            }
                                         }
-                                    }
-                                });
-                            }
+                                    });
+                                }
+                            });
                         }
                     }break;
                     case "record": this.stopPlaying();break;
                     case "image": this.imgCurrent !== 0 && (this.imgCurrent = 0);break;
                 }
             }
-            return this.noting;
         },
 
-        text: function (res) {
+        text(res) {
+            if (temp.isAutotitle) this.title = this.autotitleCreater(true);
+
             this.storageSign("text", res.content !== "" ? 2 : 0);
         },
 
-        "text.content": function (res) {
+        "text.content"(res) {
+            if (temp.isAutotitle) this.title = this.autotitleCreater(true);
+
             this.storageSign("text", res !== "" ? 2 : 0);
         },
 
-        playback: function (res) {
+        playback(res) {
             if (temp.isAutotitle) this.title = this.autotitleCreater(true);
 
             this.storageSign("record", res.length * 400 / 1e3);
 
         },
 
-        img: function (res) {
+        img(res) {
             if (temp.isAutotitle) this.title = this.autotitleCreater(true);
 
             this.storageSign("image", res.length * 400 / 1e3);
         },
 
-        video: function (res) {
+        video(res) {
             if (temp.isAutotitle) this.title = this.autotitleCreater(true);
 
             this.storageSign("video", res !== "" ? 2 : 0);
@@ -910,8 +914,8 @@ export default {
 
     methods: {
 
-        /* 记事标题 */
-        //记事标题的创建
+        /* 记事摘要 */
+        //记事摘要的创建
         titleContent(res) {
             if (res.type === "input") {
                 this.title = res.mp.detail.value;
@@ -937,18 +941,16 @@ export default {
                         this.title = this.text.content;
                     }else this.title = this.autotitleCreater();
                     wx.showToast({
-                        title: "标题已自动填充",
+                        title: "摘要已自动填充",
                         image: "/static/images/warning.png"
                     });
                 }
-                this.title = this.title.replace(/\s+(?![\S\s]+)/, ""); //去除标题末尾多余的空格
-                if (this.title.length > 25) {
-                    this.title = this.title.substring(0, 25);
-                    wx.showModal({
-                        title: "写记事",
-                        content: "警告：标题最长二十五个字！",
-                        showCancel: false,
-                        confirmText: "了解"
+                this.title = this.title.replace(/\s+(?![\S\s]+)/, ""); //去除摘要末尾多余的空格
+                if (this.title.length > 30) {
+                    this.title = this.title.substring(0, 30);
+                    wx.showToast({
+                        title: "摘要最长三十字",
+                        image: "/static/images/warning.png"
                     });
                 }
             }
@@ -957,23 +959,18 @@ export default {
         autotitleCreater(tag) {
             temp.isAutotitle = true;
             let content = [];
-            if (this.playback.length > 0) content.push("语音");
-            if (this.img.length > 0) content.push("图片");
-            if (this.video !== "") content.push("视频");
+            let needs = [this.text.content !== "", this.playback.length > 0, this.img.length > 0, this.video !== ""];
+            needs.map((ele, index) => ele && content.push(["文本", "语音", "图片", "视频"][index]));
             if (content.length === 0) content.push("记事");
             if (tag) return `${content.join("+")} ${this.title.match(/\d+/g)[0]}`;
-            let dateFn = new Date();
-            let timeStamp = dateFn.getFullYear() +
-                            ((dateFn.getMonth() + 1).toString().length < 2 ?
-                            "0" + (dateFn.getMonth() + 1) : dateFn.getMonth() + 1) +
-                            (dateFn.getDate().toString().length < 2 ?
-                            "0" + dateFn.getDate() : dateFn.getDate()) +
-                            (dateFn.getHours().toString().length < 2 ?
-                            "0" + dateFn.getHours() : dateFn.getHours()) +
-                            (dateFn.getMinutes().toString().length < 2 ?
-                            "0" + dateFn.getMinutes() : dateFn.getMinutes()) +
-                            (dateFn.getSeconds().toString().length < 2 ?
-                            "0" + dateFn.getSeconds() : dateFn.getSeconds());
+            const dateFn = new Date();
+            const timeStamp =  dateFn.getFullYear() +
+                              [dateFn.getMonth() + 1,
+                               dateFn.getDate(),
+                               dateFn.getHours(),
+                               dateFn.getMinutes(),
+                               dateFn.getSeconds()].map(ele => ele.toString().length < 2 ? "0" + ele : ele)
+                                                   .join("");
             return `${content.join("+")} ${timeStamp}`;
         },
 
@@ -1129,7 +1126,7 @@ export default {
         //语音记事的预览
         playbackFn(res) {
             if (!!res.currentTarget.id) {
-                var index = res.currentTarget.id.match(/\d+/g)[0];
+                const index = res.currentTarget.id.match(/\d+/g)[0];
                 this.stopPlaying();
                 innerAudioContext.src = this.playback[index].path;
                 (function playing (flag = false, duration = this.playback[index].duration) {
@@ -1149,7 +1146,7 @@ export default {
         },
         //语音记事的删除
         deleteRecord(res) {
-            var index = res.currentTarget.id.match(/\d+/g)[0];
+            const index = res.currentTarget.id.match(/\d+/g)[0];
             this.stopPlaying();
             wx.showModal({
             title: "语音记事",
@@ -1176,7 +1173,7 @@ export default {
         //呼吸效果的启停
         breathingEffection(tag) {
             if (tag === "start") {
-                var breathing = wx.createAnimation({ duration: 12e4 });
+                let breathing = wx.createAnimation({ duration: 12e4 });
                 for (let i = 0; i < 120; i++) {
                     breathing.backgroundColor("#FF0000").step({ duration: 1e3 })
                              .backgroundColor("#F5F5DC").step({ duration: 1e3 });
@@ -1217,7 +1214,7 @@ export default {
         //图片记事的创建与清除
         getImageFn(res) {
             if (res.type === "tap") {
-                var selection = sel => {
+                const selection = sel => {
                     switch(sel) {
                         case 0: {
                             if (temp.getCameraAccess) {
@@ -1271,12 +1268,12 @@ export default {
         },
         //图片记事的预览
         previewImage(res) {
-            var index = res.currentTarget.id.match(/\d+/g)[0];
+            const index = res.currentTarget.id.match(/\d+/g)[0];
             wx.previewImage({ urls: [this.img[index].path] });
         },
         //图片记事的保存到本地与删除
         save_deleteImage(res) {
-            var index = res.currentTarget.id.match(/\d+/g)[0];
+            const index = res.currentTarget.id.match(/\d+/g)[0];
             wx.showActionSheet({
                 itemList: ["保存本张图片到本地", "删除本张图片"],
                 success: res => {
@@ -1324,7 +1321,7 @@ export default {
         //视频记事的创建与清除
         getVideoFn(res) {
             if (res.type === "tap") {
-                var selectVideo = () => {
+                const selectVideo = () => {
                     wx.chooseVideo({
                         sourceType: ["album"],
                         success: res => {
@@ -1418,9 +1415,8 @@ export default {
 
         //各记事的进度条动画
         storageSign(type, target, step) {
-            var [r, l, for_l] = [this.storageProgress[`${type}_r`],
-                                 this.storageProgress[`${type}_l`],
-                                 (target * 1e3 - 1e3) / 1e3];
+            let [r, l] = [this.storageProgress[`${type}_r`], this.storageProgress[`${type}_l`]];
+            const for_l = (target * 1e3 - 1e3) / 1e3;
             if (step === undefined) step = (target - (r + l)) / 20;
             if (step > 0) {
                 (r += step) > (target < 1 ? target : 1) && (r = target < 1 ? target : 1);
@@ -1429,11 +1425,11 @@ export default {
                 (l += step) < (target > 1 ? for_l : 0) && (l = target > 1 ? for_l : 0);
                 l === 0 && (r += step) < target && (r = target);
             }else return;
-            ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? r : l);
+            ["r", "l"].map((ele, index) => this.storageProgress[`${type}_${ele}`] = [r, l][index]);
             if (Math.abs(target - (r + l)) <= Math.abs(step)) {
                 if (target > 1) {
-                    ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? 1 : for_l);
-                }else ["r", "l"].map(ele => this.storageProgress[`${type}_${ele}`] = ele === "r" ? target : 0);
+                    ["r", "l"].map((ele, index) => this.storageProgress[`${type}_${ele}`] = [1, for_l][index]);
+                }else ["r", "l"].map((ele, index) => this.storageProgress[`${type}_${ele}`] = [target, 0][index]);
             }else {
                 if (`${type}_progress_timer` in temp) {
                     clearInterval(temp[`${type}_progress_timer`]);
@@ -1445,7 +1441,7 @@ export default {
 
         /* 菜单栏的返回 */
         backToMenu(res) {
-            setTimeout(() => this.noting = "menu", 50);
+            this.$nextTick(() => this.noting = "menu");
         },
 
         /* 背景图的切换 */
@@ -1453,7 +1449,7 @@ export default {
             switch(res.type) {
                 case "touchstart": temp.anchor = res.clientX;break;
                 case "touchmove": {
-                    var moveDistance = (res.clientX - temp.anchor) * SWT;
+                    const moveDistance = (res.clientX - temp.anchor) * SWT;
                     if (Math.abs(moveDistance) >= 37.5) {
                         if (moveDistance > 0) {
                             this.bgiChange = 1;
@@ -1499,12 +1495,12 @@ export default {
                             title: "正在保存记事！",
                             mask: true
                         });
-                        var restToSave = this.playback.length + this.img.length + 1;
-                        var save_jump = () => {
-                            var note = wx.getStorageSync("note");
-                            var id = temp["item_to_edit"];
+                        let restToSave = this.playback.length + this.img.length + 1;
+                        const save_jump = () => {
+                            let note = wx.getStorageSync("note");
+                            let id = temp["item_to_edit"];
                             if (!id && id !== 0) id = note.length;
-                            var item = {
+                            const item = {
                                 title: { content: this.title, isAutotitle: temp.isAutotitle },
                                 text: this.text,
                                 record: this.playback.map(ele => {
@@ -1556,7 +1552,7 @@ export default {
                     }else if (this.saveSign === "save" && !res.confirm) {
                         redirecting();
                     }else if (this.saveSign === "cancel" && res.confirm) {
-                        let condition = [this.text.content === "",
+                        const condition = [this.text.content === "",
                                          this.playback.length === 0,
                                          this.img.length === 0,
                                          this.video === ""].every(ele => ele === true);
@@ -1566,7 +1562,7 @@ export default {
                                 content: "当前记事已空，是否彻底删除当前记事？",
                                 success(res) {
                                     if (res.confirm) {
-                                        var storage = wx.getStorageSync("note");
+                                        let storage = wx.getStorageSync("note");
                                         storage.splice(temp.item_to_edit, 1);
                                         wx.setStorageSync("note", storage);
                                         wx.showToast({
@@ -1591,12 +1587,11 @@ export default {
                 case "back": this.camSet = "front";break;
                 case "front": this.camSet = "back";break;
             }
-            var camChange = tag => {
+            (function camChange (tag = 2) {
                 tag -= 1;
                 this.camSign = 1 - this.camSign;
-                if (tag > 0) setTimeout(() => camChange(tag), 500);
-            }
-            camChange(2);
+                if (tag > 0) setTimeout(() => camChange.call(this, tag), 500);
+            }).call(this);
         },
         //闪关灯的开启与关闭
         flashSet(res) {
@@ -1743,4 +1738,5 @@ export default {
 
 
 }
+
 </script>

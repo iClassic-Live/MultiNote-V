@@ -82,12 +82,13 @@
 </style>
 
 <script>
+
 export default {
 
   data() {
     return {
 
-      version: "MultiNote V1.7.1 Build",
+      version: "MultiNote V1.7.3 Build",
 
       backgroundImage: wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")]
       
@@ -115,8 +116,9 @@ export default {
       } else wx.redirectTo({ url: `../${length === 0 ? "Create" : "Show"}Note/main` });
     }
 
-  },
+  }
 
 
 };
+
 </script>
