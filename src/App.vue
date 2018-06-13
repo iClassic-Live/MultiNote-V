@@ -3,8 +3,10 @@ export default {
   
   onLaunch(res) {
     console.log("MultiNote onLaunch");
+
     if (wx.getStorageInfoSync().keys.indexOf("note") === -1) wx.setStorageSync("note", []);
     if (wx.getStorageInfoSync().keys.indexOf("bgiCurrent") === -1) wx.setStorageSync("bgiCurrent", 0);
+
     wx.setStorageSync("bgiQueue", [
       //背景图地址队列
       "/static/images/bgi1.jpg",

@@ -98,7 +98,8 @@ export default {
   /* 原生生命周期钩子--监听页面加载 */
   onLoad(res) {
     console.log("Home onLoad");
-    
+  
+
     this.backgroundImage = wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")];
 
   },

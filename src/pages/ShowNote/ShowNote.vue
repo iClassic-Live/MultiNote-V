@@ -43,20 +43,20 @@
                 </scroll-view>
 
                 <view class="bottom" @tap="tapFn_on_overview">
-                    <view class="bgiChange">
-                        <view class="bgiChange_cp" v-show="!searching">
+                    <view class="bgiChange" v-show="!searching">
+                        <view class="bgiChange_cp">
                         <img src="/static/images/bgiChange.png" v-bind:style="{left: 50 * bgiChange + '%'}" 
                          @touchstart="changeBackgroundImage" @touchmove="changeBackgroundImage"
                          @touchend="changeBackgroundImage">
                         </view>
                     </view>
-                    <view class="new" v-bind:style="{display: searching ? 'none' : 'block'}">
+                    <view class="new" v-bind:style="{display: searching ? 'none' : ''}">
                         <img src="/static/images/new.png" @tap="createNote">
                     </view>
                 </view>
             </view>
 
-            <view class="content" v-show="sw !== 'overview' && sw !== undefined">
+            <scroll-view class="content" v-show="sw !== 'overview' && sw !== undefined">
 
                 <view class="head">
                     <view class="title">
@@ -100,7 +100,7 @@
                 
                 </view>
 
-            </view>
+            </scroll-view>
 
         </view>
 

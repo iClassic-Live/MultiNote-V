@@ -594,7 +594,7 @@ export default {
             text_r: 0, text_l: 0,
             record_r: 0, record_l: 0,
             image_r: 0, image_l: 0,
-            video_r: 0, text_l: 0
+            video_r: 0, video_l: 0
         },
 
         //相机组件功能初始化
@@ -855,7 +855,7 @@ export default {
                 switch(arguments[1]) {
                     case "text": {
                         if (temp.isAutotitle) {
-                            setImmediate(() => {
+                            setTimeout(() => {
                                 if (this.text.content !== "" && temp.textContent !== this.text.content) {
                                     temp.textContent = this.text.content;
                                     wx.showModal({
@@ -869,7 +869,7 @@ export default {
                                         }
                                     });
                                 }
-                            });
+                            }, 50);
                         }
                     }break;
                     case "record": this.stopPlaying();break;
