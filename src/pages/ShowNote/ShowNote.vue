@@ -383,6 +383,7 @@
           justify-content: center;
           align-items: center;
           border-radius: 50%;
+          border: 7.5rpx solid #FFF;
           background-color: #F5F5DC;
         }
       

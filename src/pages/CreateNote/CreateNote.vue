@@ -73,18 +73,18 @@
 
                     <view class="record sel" v-show="noting === 'record'">
 
+                        <view class="playback ele" @tap="playbackFn">
+                            <button v-bind:id="'rec_' + index" v-bind:src="item.path" v-for="(item, index) in playback" :key="index"
+                             v-bind:style="{opacity:item.opacity}" @tap.stop="playbackFn" @longpress.stop="deleteRecord">
+                             {{index + 1}}</button>
+                        </view>
+
                         <view class="recording ele" @tap="playbackFn">
                             <view class="rec_component" v-bind:animation="rotating">
                                 <view class="rec_pointer"></view>
                                 <button disabled="true" v-bind:animation="breathing"
                                  @touchstart="startRecord" @touchend="stopRecord"></button>
                             </view>
-                        </view>
-
-                        <view class="playback ele" @tap="playbackFn">
-                            <button v-bind:id="'rec_' + index" v-bind:src="item.path" v-for="(item, index) in playback" :key="index"
-                             v-bind:style="{opacity:item.opacity}" @tap.stop="playbackFn" @longpress.stop="deleteRecord">
-                             {{index + 1}}</button>
                         </view>
 
                     </view>
@@ -387,6 +387,21 @@
                     height: 50%;
                     width: 100%;
                     display: flex;
+                }
+                .noting .creating .record .playback button {
+                    box-sizing: border-box;
+                    height: 125rpx;
+                    line-height: 125rpx;
+                    width: 125rpx;
+                    margin-top: 22.5vh;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    border: 7.5rpx solid #FFF;
+                    background-color: #F5F5DC;
+                    border-radius: 50%;
+                }
+                .noting .creating .record .recording {
                     justify-content: center;
                     align-items: center;
                 }
@@ -394,7 +409,6 @@
                     position: absolute;
                     height: 275rpx;
                     width: 275rpx;
-                    bottom: 0;
                     background-color: #06f;
                     border-radius: 50%;
                     display: flex;
@@ -415,13 +429,6 @@
                     width: 200rpx;
                     border-radius: 50%;
                     background-color: #F5F5DC;
-                }
-                .noting .creating .record .playback button {
-                    height: 125rpx;
-                    line-height: 125rpx;
-                    width: 125rpx;
-                    text-align: center;
-                    border-radius: 50%;
                 }
             /* 图片记事 */
                 .noting .creating .photo swiper {
