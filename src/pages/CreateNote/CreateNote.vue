@@ -73,7 +73,7 @@
 
                     <view class="record sel" v-show="noting === 'record'">
 
-                        <view class="recording ele">
+                        <view class="recording ele" @tap="playbackFn">
                             <view class="rec_component" v-bind:animation="rotating">
                                 <view class="rec_pointer"></view>
                                 <button disabled="true" v-bind:animation="breathing"
@@ -554,6 +554,7 @@ const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的�
 //语音记事初始化
 const recorderManager = wx.getRecorderManager(); //获取全局唯一的录音管理器 recorderManager
 const innerAudioContext = wx.createInnerAudioContext(); //创建并返回内部audio上下文 innerAudioContext 对象
+innerAudioContext.autoplay = true; //自动播放
 
 var temp = { bgiQueue: wx.getStorageSync("bgiQueue") } //临时数据存储器
 
@@ -1125,9 +1126,9 @@ export default {
         },
         //语音记事的预览
         playbackFn(res) {
+            this.stopPlaying();
             if (!!res.currentTarget.id) {
                 const index = res.currentTarget.id.match(/\d+/g)[0];
-                this.stopPlaying();
                 innerAudioContext.src = this.playback[index].path;
                 (function playing (flag = false, duration = this.playback[index].duration) {
                     if (this.playback[index].opacity < 0.3) flag = true;
@@ -1142,7 +1143,7 @@ export default {
                         } else this.playback[index].opacity = 1;
                     }, 35);
                 }).call(this);
-            }else this.stopPlaying();
+            }
         },
         //语音记事的删除
         deleteRecord(res) {
