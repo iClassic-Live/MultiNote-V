@@ -93,13 +93,13 @@
                         <swiper v-if="!reRender" v-bind:current="imgCurrent" circular="true"
                         indicator-dots="true" indicator-active-color="#fff" @animationfinish="setImgCurrent">
                             <swiper-item v-bind:id="'image_' + index" v-for="(item, index) in img" :key="index" @tap="previewImage" @longpress="save_deleteImage">
-                                <img mode="aspectFit" v-bind:src="item.path">
+                                <img mode="aspectFit" v-bind:src="item">
                             </swiper-item>
                         </swiper>
                     </view>
 
-                    <view class="video sel" v-show="noting === 'video'">
-                        <video v-bind:src="video" @longpress="videoPreview"></video>
+                    <view class="video sel" v-if="noting === 'video'">
+                        <video id="video" v-bind:src="video" @longpress="videoPreview"></video>
                     </view>
                     
 
@@ -546,6 +546,7 @@
             #cameraFn .preview {
                 height: 100%;
                 width: 100%;
+                background-color: #000;
             }
             .preview img {
                 height: 100%;
@@ -559,11 +560,11 @@
 const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的相对像素比
 
 //语音记事初始化
-const recorderManager = wx.getRecorderManager(); //获取全局唯一的录音管理器 recorderManager
-const innerAudioContext = wx.createInnerAudioContext(); //创建并返回内部audio上下文 innerAudioContext 对象
+const recorderManager = wx.getRecorderManager();  //获取全局唯一的录音管理器 recorderManager
+const innerAudioContext = wx.createInnerAudioContext();  //创建并返回内部audio上下文 innerAudioContext 对象
 innerAudioContext.autoplay = true; //自动播放
 
-var temp = { bgiQueue: wx.getStorageSync("bgiQueue") } //临时数据存储器
+var temp = { bgiQueue: wx.getStorageSync("bgiQueue") };  //临时数据存储器
 
 export default {
 
@@ -636,10 +637,7 @@ export default {
             this.title = note.title.content;
             temp.isAutotitle = note.title.isAutotitle;
             this.text = note.text;
-            this.playback = note.record.map(ele => {
-                ele.opacity = 1;
-                return ele;
-            });
+            this.playback = note.record.map(ele => ({path: ele, opacity: 1}));
             this.img = note.image;
             this.video = note.video;
         } else this.title = this.autotitleCreater();
@@ -661,6 +659,8 @@ export default {
                     wx.hideToast();
                     temp.isShowToast = false;
                 }
+                wx.vibrateShort();
+                wx.showToast({ title: "录音开始", icon: "none" });
                 this.breathingEffection("start");
                 this.progressbar("start");
                 //注册录音结束事件
@@ -669,6 +669,7 @@ export default {
                     this.breathingEffection("stop");
                     this.progressbar("stop");
                     if (res.duration >= 12e4) {
+                        temp.isOvertime = true;
                         wx.showToast({
                             title: "录音限时两分钟",
                             image: "/static/images/warning.png",
@@ -678,7 +679,6 @@ export default {
                     if (res.duration > 500) {
                         this.playback.push({
                             path: res.tempFilePath,
-                            duration: res.duration,
                             opacity: 1
                         });
                         wx.showToast({
@@ -709,7 +709,7 @@ export default {
             this.progressbar("stop");
         });
 
-        ["record", "camera", "writePhotosAlbum"].forEach(ele => wx.authorize({
+        ["record", "camera", "writePhotosAlbum"].map(ele => wx.authorize({
             scope: `scope.${ele}`,
             success: res => {
                 switch(ele) {
@@ -830,7 +830,7 @@ export default {
         
         imagePreview(res) {
             if (this.img.length > 0) {
-                return this.img[this.img.length - 1].path;
+                return this.img[this.img.length - 1];
             }else return "";
         },
 
@@ -1126,30 +1126,31 @@ export default {
                     wx.showToast({
                         title: "录制语音请长按",
                         image: "/static/images/warning.png",
-                        mask: true
+                        mask: true,
+                        complete: res => temp.isOvertime && [wx.hideToast(), delete temp.isOvertime]
                     });
                 } else recorderManager.stop();
             }
         },
         //语音记事的预览
         playbackFn(res) {
+            ["Play", "Stop", "Ended"].map(ele => innerAudioContext[`off${ele}`]());
             this.stopPlaying();
             if (!!res.currentTarget.id) {
                 const index = res.currentTarget.id.match(/\d+/g)[0];
                 innerAudioContext.src = this.playback[index].path;
-                (function playing (flag = false, duration = this.playback[index].duration) {
-                    if (this.playback[index].opacity < 0.3) flag = true;
-                    if (this.playback[index].opacity > 1) flag = false;
-                    if (flag) {
-                        this.playback[index].opacity += 0.025;
-                    } else this.playback[index].opacity -= 0.025;
-                    temp.playbackSign = setTimeout(() => {
-                        duration -= 35;
-                        if (duration > 0) {
-                            playing.apply(this, [flag, duration]);
-                        } else this.playback[index].opacity = 1;
-                    }, 35);
-                }).call(this);
+                innerAudioContext.onPlay(() => {
+                    (function playing (flag = false, duration = this.playback[index].duration) {
+                        if (this.playback[index].opacity < 0.3) flag = true;
+                        if (this.playback[index].opacity > 1) flag = false;
+                        if (flag) {
+                            this.playback[index].opacity += 0.025;
+                        } else this.playback[index].opacity -= 0.025;
+                        temp.playbackSign.push(setTimeout(() => playing.call(this, flag), 35));
+                    }).call(this);
+                });
+                innerAudioContext.onStop(() => this.stopPlaying());
+                innerAudioContext.onEnded(() => this.stopPlaying());
             }
         },
         //语音记事的删除
@@ -1210,11 +1211,12 @@ export default {
         },
         //截停正在播放的语音
         stopPlaying(res) {
-            if ("playbackSign" in temp) {
+            if (!temp.hasOwnProperty("playbackSign")) temp.playbackSign = [];
+            if (temp.playbackSign.length > 0) {
                 innerAudioContext.stop();
-                clearTimeout(temp.playbackSign);
-                this.playback.forEach(ele => ele.opacity = 1);
-                delete temp.playbackSign;
+                for (let timeout of temp.playbackSign) clearTimeout(timeout);
+                this.playback.map(ele => ele.opacity !==1 && (ele.opacity = 1));
+                temp.playbackSign = [];
             }
         },
 
@@ -1241,7 +1243,7 @@ export default {
                             wx.chooseImage({
                                 count: 5 - this.img.length,
                                 sourceType: ["album"],
-                                success: res => res.tempFilePaths.map(ele => this.img.push({ path: ele })),
+                                success: res => res.tempFilePaths.map(ele => this.img.push(ele)),
                                 complete: res => {
                                     if (/ok/g.test(res.errMsg)) {
                                         this.imgCurrent = this.img.length -1;
@@ -1277,7 +1279,7 @@ export default {
         //图片记事的预览
         previewImage(res) {
             const index = res.currentTarget.id.match(/\d+/g)[0];
-            wx.previewImage({ urls: [this.img[index].path] });
+            wx.previewImage({ urls: [this.img[index]] });
         },
         //图片记事的保存到本地与删除
         save_deleteImage(res) {
@@ -1368,13 +1370,13 @@ export default {
                 });
             }
         },
-        //视频记事的预览与删除
+        //视频记事的保存到本地与删除
         videoPreview(res) {
+            wx.createVideoContext("video", this).pause();
             wx.showActionSheet({
                 itemList: ["保存视频到本地", "删除视频"],
                 success: res => {
                     if (!res.tapIndex) {
-                        wx.createVideoContext(this.video).pause();
                         if (temp.getWritePhotosAlbumAccess) {
                             wx.saveVideoToPhotosAlbum({
                                 filePath: this.video,
@@ -1386,7 +1388,6 @@ export default {
                                     });
                                 },
                                 fail: res => {
-                                    "wait to code";
                                     wx.showToast({
                                         title: "保存操作失败！",
                                         image: "/static/images/error.png",
@@ -1511,15 +1512,8 @@ export default {
                             const item = {
                                 title: { content: this.title, isAutotitle: temp.isAutotitle },
                                 text: this.text,
-                                record: this.playback.map(ele => {
-                                    delete ele.index;
-                                    delete ele.opacity;
-                                    return ele;
-                                }),
-                                image: this.img.map(ele => {
-                                    delete ele.index;
-                                    return ele;
-                                }),
+                                record: this.playback.map(ele => ele.path),
+                                image: this.img,
                                 video: this.video
                             }
                             note[id] = item;
@@ -1532,31 +1526,34 @@ export default {
                                 success: setTimeout(() => redirecting(), 1250)
                             });
                         }
-                        for (let prop in this) {
-                            if (["playback", "img", "video"].indexOf(prop) !== -1) {
-                                if (this[prop] instanceof Array) {
-                                    this[prop].forEach((ele, index) => {
-                                        wx.saveFile({
-                                            tempFilePath: ele.path,
-                                            success: res => "savedFilePath" in res && (this[prop][index].path = res.savedFilePath),
-                                            complete: res => {
-                                                restToSave -= 1;
-                                                if (restToSave === 0) save_jump();
-                                            }
-                                        });
-                                    });
-                                }else {
-                                    wx.saveFile({
-                                        tempFilePath: this.video,
-                                        success: res => "savedFilePath" in res && (this.video = res.savedFilePath),
-                                        complete: res => {
-                                            restToSave -= 1;
-                                            if (restToSave === 0) save_jump();
-                                        }
-                                    });
+                        this.playback.forEach((ele, index) => {
+                            wx.saveFile({
+                                tempFilePath: ele.path,
+                                success: res => "savedFilePath" in res && (ele.path = res.savedFilePath),
+                                complete: res => {
+                                    restToSave -= 1;
+                                    if (restToSave === 0) save_jump();
                                 }
+                            });
+                        });
+                        this.img.forEach((ele, index) => {
+                            wx.saveFile({
+                                tempFilePath: ele,
+                                success: res => "savedFilePath" in res && (this.img[index] = res.savedFilePath),
+                                complete: res => {
+                                    restToSave -= 1;
+                                    if (restToSave === 0) save_jump();
+                                }
+                            });
+                        });
+                        wx.saveFile({
+                            tempFilePath: this.video,
+                            success: res => "savedFilePath" in res && (this.video = res.savedFilePath),
+                            complete: res => {
+                                restToSave -= 1;
+                                if (restToSave === 0) save_jump();
                             }
-                        }
+                        });
                     }else if (this.saveSign === "save" && !res.confirm) {
                         redirecting();
                     }else if (this.saveSign === "cancel" && res.confirm) {
@@ -1610,12 +1607,10 @@ export default {
         },
         //图片的预览
         preview(res) {
-            if (this.img.length > 0) {
-                let imgQueue = [];
-                this.img.forEach(ele => imgQueue.push(ele.path));
+            if (this.img.length > 0) {;
                 wx.previewImage({
-                    urls: imgQueue,
-                    current: this.img[this.img.length - 1].path
+                    urls: this.img,
+                    current: this.img[this.img.length - 1]
                 });
             }else {
                 wx.showToast({
@@ -1632,12 +1627,8 @@ export default {
                     camera.takePhoto({
                         quality: this.quality.toLowerCase(),
                         success: res => setImmediate(() => {
-                            innerAudioContext.autoplay = true;
                             innerAudioContext.src = "/static/audio/shutter.mp3";
-                            this.img.push({
-                                index: this.img.length,
-                                path: res.tempImagePath
-                            });
+                            this.img.push(res.tempImagePath);
                             wx.showToast({
                                 title: "第" + this.img.length + "张图片记事",
                                 icon: "none",
@@ -1645,13 +1636,15 @@ export default {
                                 mask: this.img.length === 5
                             });
                             this.isPreview = true;
-                            setTimeout(() => {
-                                this.isPreview = false;
-                                if (this.img.length === 5) {
-                                    this.imgCurrent = 4;
-                                    this.noting = "image";
-                                }
-                            }, 1e3);
+                            this.$nextTick(() => {
+                                setTimeout(() => {
+                                    this.isPreview = false;
+                                    if (this.img.length === 5) {
+                                        this.imgCurrent = 4;
+                                        this.noting = "image";
+                                    }
+                                }, 1e3);
+                            });
                         }),
                         fail: res => setImmediate(() => {
                             wx.showToast({
@@ -1670,7 +1663,6 @@ export default {
                         });
                         camera.startRecord({
                             success: res => setImmediate(() => {
-                                innerAudioContext.autoplay = true;
                                 innerAudioContext.src = "/static/audio/tick.mp3";
                                 wx.vibrateShort();
                                 (function shooting () {
@@ -1698,7 +1690,6 @@ export default {
                         camera.stopRecord({
                             success: res => setImmediate(() => {
                                 this.video = res.tempVideoPath;
-                                innerAudioContext.autoplay = true;
                                 innerAudioContext.src = "/static/audio/tick.mp3";
                                 wx.vibrateShort();
                                 wx.showToast({

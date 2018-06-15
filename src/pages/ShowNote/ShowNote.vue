@@ -77,7 +77,8 @@
                       </textarea>
                   </view>
                   
-                  <view class="record" v-show="sw === 'record'" @tap.stop="getRecordInfo">
+                  <view class="record" v-bind:style="{display: sw === 'record' ? 'flex' : 'none'}"
+                   @tap.stop="getRecordInfo">
                       <button v-bind:id="'record-item_' + index" v-for="(item, index) in playback" 
                       :key="index" v-bind:style="{opacity:item.opacity}" @tap.stop="getRecordInfo">
                       {{index + 1}}
@@ -89,13 +90,13 @@
                       indicator-dots="true" indicator-active-color="#fff" @change="getImageInfo">
                           <swiper-item class="image_cp" v-bind:id="'images_' + index"
                               v-for="(item, index) in img" :key="index" @tap="getImageInfo" @longpress="getImageInfo">
-                              <img class="image_cp" v-bind:src="item.path" mode="aspectFit">
+                              <img class="image_cp" v-bind:src="item" mode="aspectFit">
                           </swiper-item>
                       </swiper>
                   </view>
 
-                  <view class="video video_cp" v-show="sw === 'video'">
-                      <video class="video_cp" v-bind:src="video" @longpress="getVideoInfo"></video>
+                  <view class="video video_cp" v-if="sw === 'video'">
+                      <video id="video" class="video_cp" v-bind:src="video" @longpress="getVideoInfo"></video>
                   </view>
                 
                 </view>
@@ -405,6 +406,7 @@
 const SWT = 750 / wx.getSystemInfoSync().screenWidth;  //获取用户本机的相对像素比
 
 const innerAudioContext = wx.createInnerAudioContext();  //创建并返回内部 audio 上下文 innerAudioContext 对象
+innerAudioContext.autoplay = true;
 
 var temp = { bgiQueue: wx.getStorageSync("bgiQueue") }  //临时数据存储器
 
@@ -458,6 +460,7 @@ export default {
               ele["id"] = index;
               delete ele["title"];
               ele.text.content = ele.text.content.toString();
+              ele.record = ele.record.map(item => ({ path: item, opacity: 1 }));
               return ele;
           })
 
@@ -727,21 +730,18 @@ export default {
               this.sw = label;
               this.title = this.note[index].title;
               if (note.text.content.length > 0) this.text = note.text;
-              if (note.record.length > 0) this.playback = note.record.map(ele => {
-                  ele.opacity = 1;
-                  return ele;
-              });
-              if (note.image.length > 0) this.img = note.image;
+              if (note.record.length > 0) this.playback = note.record;
+              if (note.image.length > 0) (this.img = note.image, this.imgCurrent = 0);
               if (note.video.length > 0) this.video = note.video;
           } else {
               switch (label) {
-                  case "text": var content = "文本记事"; break;
-                  case "record": var content = "语音记事"; break;
-                  case "image": var content = "图片记事"; break;
-                  case "video": var content = "视频记事"; break;
+                  case "text": var content = "文本"; break;
+                  case "record": var content = "语音"; break;
+                  case "image": var content = "图片"; break;
+                  case "video": var content = "视频"; break;
               }
               wx.showToast({
-                  title: `该项无${content}`,
+                  title: `该项无${content}记事`,
                   image: "/static/images/warning.png"
               });
           }
@@ -885,48 +885,39 @@ export default {
       },
       //记事语音的操作
       getRecordInfo(res) {
-          if (!!res.currentTarget.id) {
+        const stopPlaying = () => {
+            if (!temp.hasOwnProperty("playbackSign")) temp.playbackSign = [];
+            if (temp.playbackSign.length > 0) {
+                innerAudioContext.stop();
+                for (let timeout of temp.playbackSign) clearTimeout(timeout);
+                this.playback.map(ele => ele.opacity !==1 && (ele.opacity = 1));
+                temp.playbackSign = [];
+            }
+        };
+        ["Play", "Stop", "Ended"].map(ele => innerAudioContext[`off${ele}`]());
+        stopPlaying();
+        if (!!res.currentTarget.id) {
             const index = res.currentTarget.id.match(/\d+/g)[0];
-            const timeStamp = new Date().getTime();
-            if ((temp.timerQueue || []).length > 0) {
-                innerAudioContext.stop();
-                for (let value of temp.timerQueue) clearTimeout(value);
-                this.playback.forEach(ele => ele.opacity = 1);
-                temp.timerQueue = [];
-            } else temp.timerQueue = [];
-            innerAudioContext.autoplay = true;
             innerAudioContext.src = this.playback[index].path;
-            (function breathingEffection () {
-                if (this.playback[index].opacity >= 1) temp.flag = true;
-                if (this.playback[index].opacity <= 0.3) temp.flag = false;
-                const timer = setTimeout(() => {
-                    if (new Date().getTime() - timeStamp < this.playback[index].duration - 35) {
-                        if (temp.flag) {
-                            this.playback[index].opacity -= 0.025;
-                        } else this.playback[index].opacity += 0.025;
-                        breathingEffection.call(this);
-                    } else {
-                        this.playback[index].opacity = 1;
-                        temp.timerQueue.splice(temp.timerQueue.indexOf(timer), 1);
-                        delete temp.flag;
-                    }
-                }, 35);
-                if (temp.timerQueue.indexOf(timer) === -1) temp.timerQueue.push(timer);
-            }).call(this);
-          }else {
-            if ((temp.timerQueue || []).length > 0) {
-                innerAudioContext.stop();
-                for (let value of temp.timerQueue) clearTimeout(value);
-                this.playback.forEach(ele => ele.opacity = 1);
-                temp.timerQueue = [];
-            } else temp.timerQueue = [];
-          }
+            innerAudioContext.onPlay(() => {
+                (function playing (flag = false, duration = this.playback[index].duration) {
+                    if (this.playback[index].opacity < 0.3) flag = true;
+                    if (this.playback[index].opacity > 1) flag = false;
+                    if (flag) {
+                        this.playback[index].opacity += 0.025;
+                    } else this.playback[index].opacity -= 0.025;
+                    temp.playbackSign.push(setTimeout(() => playing.call(this, flag), 35));
+                }).call(this);
+            });
+            innerAudioContext.onStop(() => stopPlaying());
+            innerAudioContext.onEnded(() => stopPlaying());
+            }
       },
       //记事图片的操作
       getImageInfo(res) {
           if (res.type === "tap") {
               const index = res.currentTarget.id.match(/\d+/g)[0];
-              wx.previewImage({ urls: [this.img[index].path] });
+              wx.previewImage({ urls: [this.img[index]] });
           }else if (res.type === "longpress") {
             const index = res.currentTarget.id.match(/\d+/g)[0];
             const saveImage = () => {
@@ -936,7 +927,7 @@ export default {
                     success: res => {
                         if (res.confirm) {
                             wx.saveImageToPhotosAlbum({
-                                filePath: this.img[index].path,
+                                filePath: this.img[index],
                                 success: res => {
                                     wx.showToast({
                                         title: "保存图片成功！",

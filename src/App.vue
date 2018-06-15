@@ -21,7 +21,7 @@ export default {
     note.forEach(ele => {
       for (let prop in ele) {
         if (prop === "record" || prop === "image") {
-          ele[prop].forEach(el => fileHasSaved.push(el.path));
+          ele[prop].forEach(el => fileHasSaved.push(el));
         }else if (prop === "video") fileHasSaved.push(ele[prop]);
       }
     });
