@@ -88,7 +88,7 @@ export default {
   data() {
     return {
 
-      version: "MultiNote V1.7.4 Build",
+      version: "MultiNote V1.7.5 Build",
 
       backgroundImage: wx.getStorageSync("bgiQueue")[wx.getStorageSync("bgiCurrent")]
       

@@ -80,10 +80,12 @@
                         </view>
 
                         <view class="recording ele" @tap="playbackFn">
-                            <view class="rec_component" v-bind:animation="rotating">
-                                <view class="rec_pointer"></view>
-                                <button disabled="true" v-bind:animation="breathing"
-                                 @touchstart="startRecord" @touchend="stopRecord"></button>
+                            <img src="/static/images/mic.png" v-bind:style="{height: isPushRecordBtn ? '212.5rpx' : '225rpx',
+                            width: isPushRecordBtn ? '212.5rpx' : '225rpx'}" @touchstart="startRecord" @touchend="stopRecord"/>
+                            <view class="rec">
+                                <view v-bind:class="'rec-o rec-o-' + item" v-for="item in ['l', 'r']" :key="item">
+                                    <view v-bind:class="'rec-i rec-i-' + item" v-bind:style="{transform: 'rotate(' + (recSign[item] - 1) * 180 + 'deg)'}"></view>
+                                </view>
                             </view>
                         </view>
 
@@ -405,30 +407,49 @@
                     justify-content: center;
                     align-items: center;
                 }
-                .noting .creating .record .recording .rec_component {
+                .noting .creating .record .recording img {
+                    position: absolute;
+                    z-index: 1;
+                }
+                .noting .creating .record .recording .rec {
                     position: absolute;
                     height: 275rpx;
                     width: 275rpx;
-                    background-color: #06f;
-                    border-radius: 50%;
+                }
+                .noting .creating .record .recording .rec-o {
+                    position: absolute;
+                    box-sizing: border-box;
+                    height: 275rpx;
+                    width: 137.5rpx;
+                    overflow: hidden;
                     display: flex;
                     justify-content: center;
                     align-items: center;
                 }
-                .noting .creating .record .recording .rec_component .rec_pointer {
-                    position: absolute;
-                    top: 30rpx;
-                    height: 125rpx;
-                    width: 125rpx;
-                    background-color: orangered;
-                    transform: rotate(45deg);
+                .rec-o-r {
+                    right: 0;
+                    border-radius: 0 137.5rpx 137.5rpx 0;
                 }
-                .noting .creating .record .recording .rec_component button {
-                    position: absolute;
-                    height: 200rpx;
-                    width: 200rpx;
-                    border-radius: 50%;
-                    background-color: #F5F5DC;
+                .rec-o-l {
+                    left: 0;
+                    border-radius: 137.5rpx 0 0 137.5rpx;
+                }
+                .rec-i {
+                    box-sizing: border-box;
+                    height: 100%;
+                    width: 100%;
+                    border-width: 12.5rpx;
+                    border-style: solid;
+                }
+                .rec-i-r {
+                    border-radius: 0 137.5rpx 137.5rpx 0;
+                    border-color: orange orange orange transparent;
+                    transform-origin: left center;
+                }
+                .rec-i-l {
+                    border-radius: 137.5rpx 0 0 137.5rpx;
+                    border-color: orange transparent orange orange;
+                    transform-origin: right center;
                 }
             /* 图片记事 */
                 .noting .creating .photo swiper {
@@ -590,8 +611,8 @@ export default {
         ],
 
         playback: [],
-        breathing: null,
-        rotating: null,
+        isPushRecordBtn: false,
+        recSign: { r: 0, l: 0 },
 
         img: [],
         imgCurrent: 0,
@@ -661,13 +682,24 @@ export default {
                 }
                 wx.vibrateShort();
                 wx.showToast({ title: "录音开始", icon: "none" });
-                this.breathingEffection("start");
-                this.progressbar("start");
+                clearTimeout(temp.recSign);
+                ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
+                (function rolling () {
+                    if (this.recSign["r"] < 1) this.recSign["r"] += (1 / 1200);
+                    else if (this.recSign["l"] < 1) this.recSign["l"] += (1 / 1200);
+                    if (this.recSign["l"] < 1) temp.recSign = setTimeout(() => rolling.call(this), 50);
+                    else ["r", "l"].map(ele => this.recSign[ele] !== 1 && (this.recSign[ele] = 1));
+                }).call(this);
                 //注册录音结束事件
                 recorderManager.onStop(res => {
                     temp.recordNow = false;
-                    this.breathingEffection("stop");
-                    this.progressbar("stop");
+                    clearTimeout(temp.recSign);
+                    (function rolling (step = (this.recSign["r"] + this.recSign["l"]) / 10) {
+                        if (this.recSign["l"] > 0) this.recSign["l"] -= step;
+                        else if (this.recSign["r"] > 0) this.recSign["r"] -= step;
+                        if (this.recSign["r"] > 0) temp.recSign = setTimeout(() => rolling.call(this, step), 25);
+                        else ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
+                    }).call(this);
                     if (res.duration >= 12e4) {
                         temp.isOvertime = true;
                         wx.showToast({
@@ -699,14 +731,6 @@ export default {
                     }
                 });
             }
-        });
-
-        //预热录音记事录音按钮的启停动画效果
-        this.breathingEffection("start");
-        this.progressbar("start");
-        this.$nextTick(() => {
-            this.breathingEffection("stop");
-            this.progressbar("stop");
         });
 
         ["record", "camera", "writePhotosAlbum"].map(ele => wx.authorize({
@@ -1090,6 +1114,7 @@ export default {
         },
         //开始语音记事
         startRecord(res) {
+            this.isPushRecordBtn = true;
             this.stopPlaying();
             if (temp.getRecordAccess) {
                 if (this.playback.length < 5) {
@@ -1120,6 +1145,7 @@ export default {
         },
         //结束语音记事
         stopRecord(res) {
+            this.isPushRecordBtn = false;
             if (!temp.noRecordAccess) {
                 temp.isEndRecording = true;
                 if (!temp.recordNow && this.playback.length < 5) {
@@ -1178,36 +1204,6 @@ export default {
                     }
                 }
             });
-        },
-        //呼吸效果的启停
-        breathingEffection(tag) {
-            if (tag === "start") {
-                let breathing = wx.createAnimation({ duration: 12e4 });
-                for (let i = 0; i < 120; i++) {
-                    breathing.backgroundColor("#FF0000").step({ duration: 1e3 })
-                             .backgroundColor("#F5F5DC").step({ duration: 1e3 });
-                }
-                this.breathing = breathing.export();
-            } else if (tag === "stop") {
-                this.reRender = true;
-                this.$nextTick(() => {
-                    this.reRender = false;
-                    this.breathing = wx.createAnimation({ duration: 0 })
-                                       .backgroundColor("#F5F5DC").step({ duration: 0 })
-                                       .export();
-                });
-            }
-        },
-        //进度指示的启停
-        progressbar(tag) {
-            switch(tag) {
-                case "start": { var val = [12e4, 360]; }break;
-                case "stop":{  var val = [1e3, 0]; }break;
-                default: return;
-            }
-            this.rotating = wx.createAnimation({ duration: val[0] })
-                              .rotate(val[1]).step({ duration: val[0] })
-                              .export();
         },
         //截停正在播放的语音
         stopPlaying(res) {
