@@ -682,45 +682,49 @@ export default {
                 }
                 wx.vibrateShort();
                 wx.showToast({ title: "录音开始", icon: "none" });
-                clearTimeout(temp.recSign);
                 ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
-                (function rolling () {
-                    if (this.recSign["r"] < 1) this.recSign["r"] += (1 / 1200);
-                    else if (this.recSign["l"] < 1) this.recSign["l"] += (1 / 1200);
-                    if (this.recSign["l"] < 1) temp.recSign = setTimeout(() => rolling.call(this), 50);
-                    else ["r", "l"].map(ele => this.recSign[ele] !== 1 && (this.recSign[ele] = 1));
+                clearTimeout(temp.recSign);const arr = [];
+                (function rollToEnd (start = (new Date()).getTime(), fixTime = 0) {
+                    const executeTime = (new Date()).getTime();
+                    const fixError = executeTime - start - fixTime;
+                    let [r, l] = [this.recSign["r"], this.recSign["l"]];
+                    if (r < 1) (r *= 1e3, r += 1, r /= 1e3, this.recSign["r"] = r);
+                    else if (l < 1) (l *= 1e3, l += 1, l /= 1e3, this.recSign["l"] = l);
+                    temp.recSign = setTimeout(() => rollToEnd.call(this, executeTime, 60 - fixError), 60 - fixError);
                 }).call(this);
                 //注册录音结束事件
                 recorderManager.onStop(res => {
                     temp.recordNow = false;
                     clearTimeout(temp.recSign);
-                    (function rolling (step = (this.recSign["r"] + this.recSign["l"]) / 10) {
-                        if (this.recSign["l"] > 0) this.recSign["l"] -= step;
-                        else if (this.recSign["r"] > 0) this.recSign["r"] -= step;
-                        if (this.recSign["r"] > 0) temp.recSign = setTimeout(() => rolling.call(this, step), 25);
-                        else ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
+                    (function rollToStart (step) {
+                        let [r, l] = [this.recSign["r"], this.recSign["l"]];
+                        if (step === undefined) step = ((r + l) / 20).toFixed(5);
+                        if (l > 0) (l = (l - step).toFixed(5), l < 0 && (l = 0), this.recSign["l"] = l);
+                        else if (r > 0) (r = (r - step).toFixed(5), r < 0 && (r = 0), this.recSign["r"] = r);
+                        if (this.recSign["r"] > 0) temp.recSign = setTimeout(() => rollToStart.call(this, step), 25);
                     }).call(this);
-                    if (res.duration >= 12e4) {
-                        temp.isOvertime = true;
-                        wx.showToast({
-                            title: "录音限时两分钟",
-                            image: "/static/images/warning.png",
-                            mask: true
-                        });
-                    }
                     if (res.duration > 500) {
                         this.playback.push({
                             path: res.tempFilePath,
                             opacity: 1
                         });
-                        wx.showToast({
-                            title: "第" + this.playback.length + "条语音记事",
-                            icon: "none",
-                            success(res) {
-                                temp.isShowToast = true;
-                                setTimeout(() => temp.isShowToast = false, 1450);
-                            }
-                        });
+                        if (res.duration >= 12e4) {
+                            temp.isOvertime = true;
+                            wx.showToast({
+                                title: "录音限时两分钟",
+                                image: "/static/images/warning.png",
+                                mask: true
+                            });
+                        }else {
+                            wx.showToast({
+                                title: "第" + this.playback.length + "条语音记事",
+                                icon: "none",
+                                success(res) {
+                                    temp.isShowToast = true;
+                                    setTimeout(() => temp.isShowToast = false, 1450);
+                                }
+                            });
+                        }
                         wx.vibrateShort();
                     } else {
                         wx.showToast({
@@ -1153,7 +1157,7 @@ export default {
                         title: "录制语音请长按",
                         image: "/static/images/warning.png",
                         mask: true,
-                        complete: res => temp.isOvertime && [wx.hideToast(), delete temp.isOvertime]
+                        complete: res => temp.isOvertime && (wx.hideToast(), delete temp.isOvertime)
                     });
                 } else recorderManager.stop();
             }
