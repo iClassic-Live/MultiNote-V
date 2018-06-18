@@ -683,7 +683,7 @@ export default {
                 wx.vibrateShort();
                 wx.showToast({ title: "录音开始", icon: "none" });
                 ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
-                clearTimeout(temp.recSign);const arr = [];
+                clearTimeout(temp.recSign);
                 (function rollToEnd (start = (new Date()).getTime(), fixTime = 0) {
                     const executeTime = (new Date()).getTime();
                     const fixError = executeTime - start - fixTime;
@@ -703,11 +703,7 @@ export default {
                         else if (r > 0) (r = (r - step).toFixed(5), r < 0 && (r = 0), this.recSign["r"] = r);
                         if (this.recSign["r"] > 0) temp.recSign = setTimeout(() => rollToStart.call(this, step), 25);
                     }).call(this);
-                    if (res.duration > 500) {
-                        this.playback.push({
-                            path: res.tempFilePath,
-                            opacity: 1
-                        });
+                    if (res.duration > 1e3) {
                         if (res.duration >= 12e4) {
                             temp.isOvertime = true;
                             wx.showToast({
@@ -717,7 +713,7 @@ export default {
                             });
                         }else {
                             wx.showToast({
-                                title: "第" + this.playback.length + "条语音记事",
+                                title: "第" + (this.playback.length + 1) + "条语音记事",
                                 icon: "none",
                                 success(res) {
                                     temp.isShowToast = true;
@@ -726,6 +722,10 @@ export default {
                             });
                         }
                         wx.vibrateShort();
+                        this.playback.push({
+                            path: res.tempFilePath,
+                            opacity: 1
+                        });
                     } else {
                         wx.showToast({
                             title: "语音录制过短",
@@ -1149,7 +1149,6 @@ export default {
         },
         //结束语音记事
         stopRecord(res) {
-            this.isPushRecordBtn = false;
             if (!temp.noRecordAccess) {
                 temp.isEndRecording = true;
                 if (!temp.recordNow && this.playback.length < 5) {
@@ -1161,6 +1160,7 @@ export default {
                     });
                 } else recorderManager.stop();
             }
+            this.isPushRecordBtn = false;
         },
         //语音记事的预览
         playbackFn(res) {
@@ -1290,7 +1290,7 @@ export default {
                     if (res.tapIndex === 0) {
                         if (temp.getWritePhotosAlbumAccess) {
                             wx.saveImageToPhotosAlbum({
-                                filePath: this.img[index].path,
+                                filePath: this.img[index],
                                 success: res => {
                                     wx.showToast({
                                         title: "保存操作成功！",
