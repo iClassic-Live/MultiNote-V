@@ -684,14 +684,15 @@ export default {
                 wx.showToast({ title: "录音开始", icon: "none" });
                 ["r", "l"].map(ele => this.recSign[ele] !== 0 && (this.recSign[ele] = 0));
                 clearTimeout(temp.recSign);
-                (function rollToEnd (start = (new Date()).getTime(), fixTime = 0) {
-                    const executeTime = (new Date()).getTime();
-                    const fixError = executeTime - start - fixTime;
-                    let [r, l] = [this.recSign["r"], this.recSign["l"]];
-                    if (r < 1) (r *= 1e3, r += 1, r /= 1e3, this.recSign["r"] = r);
-                    else if (l < 1) (l *= 1e3, l += 1, l /= 1e3, this.recSign["l"] = l);
-                    temp.recSign = setTimeout(() => rollToEnd.call(this, executeTime, 60 - fixError), 60 - fixError);
-                }).call(this);
+                (function rollToEnd (start, count = 0) {
+                    const fixError = (new Date()).getTime() - (start + count * 60);
+                    if (count > 0) {
+                        let [r, l] = [this.recSign["r"], this.recSign["l"]];
+                        if (r < 1) (r *= 1e3, r += 1, r /= 1e3, this.recSign["r"] = r);
+                        else if (l < 1) (l *= 1e3, l += 1, l /= 1e3, this.recSign["l"] = l);
+                    }
+                    temp.recSign = setTimeout(() => rollToEnd.call(this, start, ++count), 60 - fixError);
+                }).call(this, (new Date()).getTime());
                 //注册录音结束事件
                 recorderManager.onStop(res => {
                     temp.recordNow = false;
