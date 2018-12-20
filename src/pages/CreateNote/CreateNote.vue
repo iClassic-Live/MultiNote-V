@@ -744,7 +744,7 @@ export default {
                 switch(ele) {
                     case "record": temp.getRecordAccess = true;break;
                     case "camera": temp.getCameraAccess = true;break;
-                    case "write": temp.getWritePhotosAlbumAccess = true;break;
+                    case "writePhotosAlbum": temp.getWritePhotosAlbumAccess = true;break;
                 }
             }
         }));
